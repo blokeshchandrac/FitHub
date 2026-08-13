@@ -1,0 +1,43 @@
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Local tool and installer caches
+.tools/
+.setup-installers/
+.dotnet-home/
+
+# .NET
+**/bin/
+**/obj/
+*.user
+
+# Angular / Node
+**/node_modules/
+**/dist/
+**/.angular/
+
+# IDE and operating system
+.idea/
+.vs/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Test output
+TestResults/
+coverage/
+
+# Local runtime data
+/.data/
+/docker-data/
+/postgres-data/
+
+# Temporary workspace artifacts and screenshots
+/screenshots/
+/temp/
+/tmp/
+Screenshot*.png
+codex-clipboard-*.png
+*.tmp

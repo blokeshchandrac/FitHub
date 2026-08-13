@@ -1,0 +1,7 @@
+<section class="feature-page"><p class="eyebrow">Member account</p><h1>Payments</h1><p>Stripe Sandbox membership payments and printable receipts.</p>
+  @if (error()) { <div class="api-error" role="alert">{{ error() }}</div> }
+  <div class="foundation-card table-wrap"><table><thead><tr><th>Date</th><th>Plan</th><th>Type</th><th>Status</th><th>Amount</th><th>Receipt</th></tr></thead><tbody>
+    @for (payment of overview()?.payments ?? []; track payment.id) { <tr><td>{{ payment.createdAt | date:'medium' }}</td><td>{{ payment.planName }}</td><td>{{ payment.purchaseKind }}</td><td>{{ payment.status }}</td><td>{{ payment.amount | currency:payment.currency }}</td><td>@if (payment.status === 'Succeeded') { <button class="link-button" type="button" (click)="printReceipt(payment.id)">Print</button> } @else { - }</td></tr> }
+    @empty { <tr><td colspan="6">No payments recorded.</td></tr> }
+  </tbody></table></div>
+</section>

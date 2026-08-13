@@ -1,0 +1,2 @@
+namespace FitHub.Application.Notifications;
+public interface INotificationService{Task<IReadOnlyCollection<NotificationDto>> GetAsync(Guid userId,CancellationToken cancellationToken=default);Task<bool> MarkReadAsync(Guid userId,Guid notificationId,CancellationToken cancellationToken=default);Task CreateFaultStatusAsync(Guid userId,Guid reportId,string equipmentName,string status,CancellationToken cancellationToken=default);}

@@ -1,0 +1,2 @@
+import{HttpClient}from'@angular/common/http';import{inject,Injectable}from'@angular/core';import{RecommendationOverview}from'./recommendation.models';
+@Injectable({providedIn:'root'})export class RecommendationService{private readonly http=inject(HttpClient);generate(){return this.http.post<RecommendationOverview>('/api/recommendations/generate',{});}preferences(fitnessGoal:string,activityLevel:string){return this.http.put<RecommendationOverview>('/api/recommendations/preferences',{fitnessGoal,activityLevel});}}

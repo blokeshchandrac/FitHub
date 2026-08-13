@@ -1,0 +1,33 @@
+<section class="auth-page">
+  <form class="auth-card auth-card-wide" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <p class="eyebrow">Join FitHub</p>
+    <h1>Create your account</h1>
+    <p class="auth-intro">New accounts start with Member access.</p>
+
+    <div class="form-grid">
+      <div><label for="first-name">First name</label><input id="first-name" formControlName="firstName" autocomplete="given-name" /></div>
+      <div><label for="last-name">Last name</label><input id="last-name" formControlName="lastName" autocomplete="family-name" /></div>
+    </div>
+    @if ((form.controls.firstName.touched && form.controls.firstName.invalid) || (form.controls.lastName.touched && form.controls.lastName.invalid)) {
+      <p class="field-error">First and last name are required.</p>
+    }
+
+    <label for="register-email">Email</label>
+    <input id="register-email" type="email" formControlName="email" autocomplete="email" />
+    @if (form.controls.email.touched && form.controls.email.invalid) { <p class="field-error">Enter a valid email address.</p> }
+
+    <label for="register-password">Password</label>
+    <input id="register-password" type="password" formControlName="password" autocomplete="new-password" />
+    @if (form.controls.password.touched && form.controls.password.invalid) {
+      <p class="field-error">Use at least 12 characters with uppercase, lowercase, number, and symbol.</p>
+    }
+
+    <label for="confirm-password">Confirm password</label>
+    <input id="confirm-password" type="password" formControlName="confirmPassword" autocomplete="new-password" />
+    @if (form.controls.confirmPassword.touched && form.hasError('passwordMismatch')) { <p class="field-error">Passwords do not match.</p> }
+
+    @if (apiError()) { <div class="api-error" role="alert">{{ apiError() }}</div> }
+    <button class="primary-button" type="submit" [disabled]="submitting()">{{ submitting() ? 'Creating account…' : 'Create account' }}</button>
+    <div class="auth-links"><a routerLink="/login">Already have an account?</a></div>
+  </form>
+</section>

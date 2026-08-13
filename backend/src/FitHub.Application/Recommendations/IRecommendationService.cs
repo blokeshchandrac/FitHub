@@ -1,0 +1,2 @@
+namespace FitHub.Application.Recommendations;
+public interface IRecommendationService{Task<RecommendationOverviewDto> GenerateAsync(Guid userId,CancellationToken cancellationToken=default);Task<RecommendationOverviewDto> UpdatePreferencesAsync(Guid userId,UpdateRecommendationPreferencesCommand command,CancellationToken cancellationToken=default);}

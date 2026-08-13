@@ -1,0 +1,2 @@
+import{HttpClient}from'@angular/common/http';import{inject,Injectable}from'@angular/core';import{Notification}from'./notification.models';
+@Injectable({providedIn:'root'})export class NotificationService{private readonly http=inject(HttpClient);list(){return this.http.get<readonly Notification[]>('/api/notifications');}read(id:string){return this.http.post<void>(`/api/notifications/${id}/read`,{});}}

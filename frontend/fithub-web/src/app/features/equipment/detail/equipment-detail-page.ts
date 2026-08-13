@@ -1,0 +1,9 @@
+import { Component, inject, OnInit, signal } from '@angular/core'; import { ActivatedRoute, RouterLink } from '@angular/router'; import { AuthenticationService } from '../../../core/authentication/authentication.service'; import { EquipmentDetail } from '../../../core/equipment/equipment.models'; import { EquipmentService } from '../../../core/equipment/equipment.service';
+@Component({ selector: 'app-equipment-detail-page', imports: [RouterLink], templateUrl: './equipment-detail-page.html' })
+export class EquipmentDetailPage implements OnInit {
+  private readonly route = inject(ActivatedRoute); protected readonly service = inject(EquipmentService); protected readonly auth = inject(AuthenticationService); protected readonly item = signal<EquipmentDetail | null>(null); protected readonly error = signal(''); private id = '';
+  ngOnInit(): void { this.id = this.route.snapshot.paramMap.get('id') ?? ''; this.load(); this.service.changes.subscribe(x => { if (x.equipmentId === this.id) this.load(); }); void this.service.connect(); }
+  protected action(kind: 'claim'|'sharing'|'occupied'|'release'): void { this.error.set(''); this.service[kind](this.id).subscribe({ next: x => this.item.set(x), error: e => this.error.set(e.error?.detail ?? 'The machine changed. Refresh and try again.') }); }
+  protected override(state: string, reason: string): void { if (!reason.trim()) { this.error.set('An administrator reason is required.'); return; } this.service.override(this.id, state, reason).subscribe({ next: x => this.item.set(x), error: e => this.error.set(e.error?.detail ?? 'Override failed.') }); }
+  private load(): void { this.service.detail(this.id).subscribe({ next: x => this.item.set(x), error: e => this.error.set(e.status === 403 ? 'You must be checked in to view live details.' : 'Equipment not found.') }); }
+}

@@ -1,0 +1,40 @@
+using FitHub.Domain.Payments;
+
+namespace FitHub.Application.Payments;
+
+public interface IPaymentGateway
+{
+    Task<PaymentCheckoutResult> CreateCheckoutAsync(PaymentCheckoutRequest request, CancellationToken cancellationToken = default);
+    PaymentWebhookNotification ParseWebhook(string payload, string signature);
+}
+
+public sealed record PaymentCheckoutRequest(
+    Guid PaymentId,
+    Guid UserId,
+    Guid PlanId,
+    MembershipPurchaseKind PurchaseKind,
+    string? CustomerEmail,
+    string PlanName,
+    decimal Amount,
+    string Currency);
+public sealed record PaymentCheckoutResult(string SessionId, string CheckoutUrl);
+public sealed record PaymentWebhookNotification(
+    string EventId,
+    string EventType,
+    string CheckoutSessionId,
+    Guid? PaymentId,
+    Guid? UserId,
+    Guid? PlanId,
+    MembershipPurchaseKind? PurchaseKind,
+    PaymentWebhookOutcome Outcome);
+
+public enum PaymentWebhookOutcome
+{
+    Pending,
+    Succeeded,
+    Failed,
+    Cancelled,
+    Ignored
+}
+
+public sealed class PaymentWebhookValidationException(string message) : Exception(message);

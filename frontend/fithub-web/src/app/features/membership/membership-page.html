@@ -1,0 +1,44 @@
+<section class="feature-page" [class.onboarding-page]="isOnboarding">
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">FitHub membership</p>
+      <h1>{{ isOnboarding ? 'Choose your FitHub membership' : 'Membership' }}</h1>
+      <p>{{ isOnboarding ? 'A valid membership activates FitHub gym services and member features.' : 'Review, renew, or upgrade your current plan.' }}</p>
+    </div>
+    <a class="secondary-button" routerLink="/payments">Payment history</a>
+  </div>
+
+  @if (checkoutCancelled) { <div class="foundation-card" role="status"><strong>Payment was cancelled. No charge was made.</strong><p>Choose a plan when you are ready.</p></div> }
+  @if (error()) {
+    <div class="api-error checkout-error" role="alert"><span>{{ error() }}</span><button class="secondary-button" type="button" (click)="retry()">Retry</button></div>
+  }
+  @if (context.loading()) { <div class="foundation-card" aria-live="polite">Loading membership plans…</div> }
+  @if (context.error() && !context.loading()) {
+    <div class="foundation-card"><h2>Membership status unavailable</h2><p>We could not confirm your membership right now.</p><button class="secondary-button" type="button" (click)="reload()">Try again</button></div>
+  }
+  @if (context.overview(); as data) {
+    @if (!isOnboarding) {
+      <article class="foundation-card">
+        <h2>Current membership</h2>
+        @if (data.currentMembership; as membership) {
+          <div class="metric-grid"><div><span>Plan</span><strong>{{ membership.plan.name }}</strong></div><div><span>Status</span><strong>{{ data.effectiveState }}</strong></div><div><span>Start date</span><strong>{{ membership.startsAt | date:'mediumDate' }}</strong></div><div><span>Expiry date</span><strong>{{ membership.endsAt | date:'mediumDate' }}</strong></div></div>
+        } @else { <p>No membership has been purchased yet.</p> }
+      </article>
+    }
+    @if (data.plans.length) {
+      <div class="card-grid plan-grid">
+        @for (plan of data.plans; track plan.id) {
+          <article class="foundation-card plan-card">
+            <div><p class="eyebrow">{{ plan.billingPeriodMonths }} month period</p><h2>{{ plan.name }}</h2><p>{{ plan.description }}</p></div>
+            <div><strong class="plan-price">{{ plan.price | currency:plan.currency }}</strong><span class="muted">Price confirmed by FitHub at checkout</span></div>
+            @if (actionFor(plan); as action) {
+              <button class="primary-button" type="button" [disabled]="busyPlan() !== null" (click)="checkout(plan)">{{ busyPlan() === plan.id ? 'Starting checkout…' : action.label }}</button>
+            } @else { <span class="muted">Your current plan cannot be downgraded here.</span> }
+          </article>
+        }
+      </div>
+    } @else if (!context.loading()) {
+      <div class="foundation-card"><h2>No plans available</h2><p>Please try again later or contact FitHub support.</p><button class="secondary-button" type="button" (click)="reload()">Refresh</button></div>
+    }
+  }
+</section>

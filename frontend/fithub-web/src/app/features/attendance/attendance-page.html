@@ -1,0 +1,10 @@
+<section class="feature-page"><p class="eyebrow">Gym access</p><h1>Attendance</h1><p>Generate a temporary token at the entrance and review your visits.</p>
+  @if (error()) { <div class="api-error" role="alert">{{ error() }}</div> }
+  @if (summary(); as data) {
+    <div class="metric-grid foundation-card"><div><span>This week</span><strong>{{ data.visitsThisWeek }}</strong></div><div><span>This month</span><strong>{{ data.visitsThisMonth }}</strong></div><div><span>Current membership</span><strong>{{ data.visitsInCurrentMembership }}</strong></div><div><span>Cost per visit</span><strong>{{ data.costPerVisit === null ? '-' : (data.costPerVisit | currency:'EUR') }}</strong></div></div>
+  }
+  <article class="foundation-card"><h2>Temporary check-in QR token</h2><p>The token expires after two minutes and can be scanned only once.</p><button class="primary-button" type="button" [disabled]="generating()" (click)="generateToken()">{{ generating() ? 'Generating...' : 'Generate token' }}</button>
+    @if (checkInToken(); as token) { <div class="qr-token" aria-label="Temporary QR token">@if (qrImage(); as image) { <img [src]="image" alt="Temporary FitHub check-in QR code"> }<code>{{ token.token }}</code><small>Expires {{ token.expiresAt | date:'mediumTime' }}</small></div> }
+  </article>
+  <div class="foundation-card table-wrap"><h2>Attendance history</h2><table><thead><tr><th>Checked in</th><th>Checked out</th></tr></thead><tbody>@for (visit of summary()?.history ?? []; track visit.id) { <tr><td>{{ visit.checkedInAt | date:'medium' }}</td><td>{{ visit.checkedOutAt ? (visit.checkedOutAt | date:'medium') : '-' }}</td></tr> } @empty { <tr><td colspan="2">No visits yet.</td></tr> }</tbody></table></div>
+</section>

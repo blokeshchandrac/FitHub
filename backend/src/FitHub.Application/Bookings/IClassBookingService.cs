@@ -1,0 +1,2 @@
+namespace FitHub.Application.Bookings;
+public interface IClassBookingService{Task<IReadOnlyCollection<ClassScheduleDto>> ListAsync(Guid userId,CancellationToken cancellationToken=default);Task<ClassScheduleDto> CreateAsync(CreateClassScheduleCommand command,CancellationToken cancellationToken=default);Task<ClassScheduleDto?> BookAsync(Guid scheduleId,Guid userId,CancellationToken cancellationToken=default);Task<ClassScheduleDto?> CancelAsync(Guid scheduleId,Guid userId,CancellationToken cancellationToken=default);}

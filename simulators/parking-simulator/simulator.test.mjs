@@ -1,0 +1,3 @@
+import test from'node:test';import assert from'node:assert/strict';import{nextState,detectionEvent}from'./logic.mjs';
+test('click cycle produces operational detection states',()=>{assert.equal(nextState('Available'),'Occupied');assert.equal(nextState('Occupied'),'Available');assert.equal(nextState('Unknown'),'Occupied');assert.equal(nextState('Disabled'),'Disabled');});
+test('event is explicitly synthetic and preserves confidence',()=>{const event=detectionEvent({code:'A-01'},'Occupied',.87);assert.equal(event.spaceCode,'A-01');assert.equal(event.source,'SyntheticClickSimulator');assert.equal(event.confidence,.87);assert.ok(Date.parse(event.eventTime));});

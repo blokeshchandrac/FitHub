@@ -1,0 +1,1 @@
+export interface ClassSchedule{readonly id:string;readonly name:string;readonly description:string|null;readonly startsAt:string;readonly endsAt:string;readonly capacity:number;readonly confirmedCount:number;readonly waitlistCount:number;readonly instructorUserId:string|null;readonly myStatus:string|null;}

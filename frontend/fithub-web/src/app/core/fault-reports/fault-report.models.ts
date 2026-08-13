@@ -1,0 +1,1 @@
+export interface FaultReport { id: string; equipmentId: string; equipmentName: string; reportedByUserId: string; category: string; comment: string | null; seriousSafetyConcern: boolean; status: string; maintenanceNotes: string | null; resolutionDate: string | null; imageUrls: readonly string[]; createdAt: string; }

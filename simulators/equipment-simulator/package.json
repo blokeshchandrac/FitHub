@@ -1,0 +1,1 @@
+{"name":"fithub-equipment-simulator","private":true,"type":"module","scripts":{"start":"node simulator.mjs","demo":"node simulator.mjs --demo","show-controls":"node simulator.mjs --show-controls","test":"node --test simulator.test.mjs"}}

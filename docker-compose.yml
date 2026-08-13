@@ -1,0 +1,56 @@
+name: fithub
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/src/FitHub.Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: 8080
+      ConnectionStrings__FitHubDatabase: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      SeedData__Enabled: "true"
+      SeedData__DemoPassword: ${DEMO_SEED_PASSWORD}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY}
+      Stripe__SecretKey: ${STRIPE_SECRET_KEY}
+      Stripe__WebhookSecret: ${STRIPE_WEBHOOK_SECRET}
+      Stripe__WebBaseUrl: ${FRONTEND_BASE_URL}
+      Stripe__CheckoutSuccessUrl: ${STRIPE_CHECKOUT_SUCCESS_URL}
+      Stripe__CheckoutCancelUrl: ${STRIPE_CHECKOUT_CANCEL_URL}
+      EquipmentDevices__CardUidPepper: ${EQUIPMENT_CARD_UID_PEPPER}
+      SeedData__EquipmentDeviceCredential: ${EQUIPMENT_DEVICE_CREDENTIAL}
+      SeedData__MemberCardUid: ${EQUIPMENT_MEMBER_CARD_UID}
+      SeedData__ParkingCameraCredential: ${PARKING_CAMERA_CREDENTIAL}
+    ports:
+      - "${API_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: frontend/fithub-web
+      dockerfile: Dockerfile
+    ports:
+      - "${FRONTEND_PORT:-4200}:80"
+    depends_on:
+      - api
+
+volumes:
+  postgres-data:

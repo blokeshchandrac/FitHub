@@ -1,0 +1,9 @@
+@FitHub_ApiHost = http://localhost:8080
+
+GET {{FitHub_ApiHost}}/health
+Accept: application/json
+
+###
+
+GET {{FitHub_ApiHost}}/swagger/v1/swagger.json
+Accept: application/json

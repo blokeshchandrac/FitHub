@@ -1,0 +1,17 @@
+using FitHub.Application.Bookings;using FitHub.Domain.Bookings;using FitHub.Domain.Identity;using FitHub.Infrastructure.Persistence;using Microsoft.AspNetCore.Identity;using Microsoft.EntityFrameworkCore;
+namespace FitHub.Infrastructure.Bookings;
+public sealed class ClassBookingService(FitHubDbContext db,UserManager<ApplicationUser> userManager,TimeProvider timeProvider):IClassBookingService
+{
+    public async Task<IReadOnlyCollection<ClassScheduleDto>> ListAsync(Guid userId,CancellationToken ct=default)=> (await db.ClassSchedules.AsNoTracking().Include(x=>x.Bookings).Where(x=>x.EndsAt>=timeProvider.GetUtcNow()).OrderBy(x=>x.StartsAt).ToListAsync(ct)).Select(x=>Map(x,userId)).ToList();
+    public async Task<ClassScheduleDto> CreateAsync(CreateClassScheduleCommand command,CancellationToken ct=default){var instructor=await userManager.FindByIdAsync(command.InstructorUserId.ToString())??throw new ArgumentException("Instructor not found.");var roles=await userManager.GetRolesAsync(instructor);if(!roles.Contains("Trainer")&&!roles.Contains("Administrator"))throw new ArgumentException("Instructor must be a trainer or administrator.");if(command.StartsAt<=timeProvider.GetUtcNow())throw new ArgumentException("Class must start in the future.");var item=new ClassSchedule(command.Name,command.Description,command.StartsAt,command.EndsAt,command.Capacity,command.InstructorUserId);db.ClassSchedules.Add(item);await db.SaveChangesAsync(ct);return Map(item,Guid.Empty);}
+    public Task<ClassScheduleDto?> BookAsync(Guid id,Guid userId,CancellationToken ct=default)=>ChangeLocked(id,userId,true,ct);
+    public Task<ClassScheduleDto?> CancelAsync(Guid id,Guid userId,CancellationToken ct=default)=>ChangeLocked(id,userId,false,ct);
+    private async Task<ClassScheduleDto?> ChangeLocked(Guid id,Guid userId,bool book,CancellationToken ct)
+    {
+        await using var transaction=await db.Database.BeginTransactionAsync(ct);var schedule=await db.ClassSchedules.FromSql($"SELECT * FROM \"ClassSchedules\" WHERE \"Id\" = {id} FOR UPDATE").SingleOrDefaultAsync(ct);if(schedule is null)return null;await db.Entry(schedule).Collection(x=>x.Bookings).LoadAsync(ct);var now=timeProvider.GetUtcNow();if(schedule.StartsAt<=now)throw new InvalidOperationException("This class has already started.");var mine=schedule.Bookings.SingleOrDefault(x=>x.UserId==userId);
+        if(book){var confirmed=schedule.Bookings.Count(x=>x.Status==BookingStatus.Confirmed);var status=confirmed<schedule.Capacity?BookingStatus.Confirmed:BookingStatus.Waitlisted;if(mine is null){mine=new ClassBooking(schedule.Id,userId,status,now);schedule.Bookings.Add(mine);}else mine.Rebook(status,now);}
+        else{if(mine is null||mine.Status==BookingStatus.Cancelled)throw new InvalidOperationException("No active booking exists.");var released=mine.Status==BookingStatus.Confirmed;mine.Cancel(now);if(released){var next=schedule.Bookings.Where(x=>x.Status==BookingStatus.Waitlisted).OrderBy(x=>x.BookedAt).FirstOrDefault();next?.Promote(now);}}
+        await db.SaveChangesAsync(ct);await transaction.CommitAsync(ct);return Map(schedule,userId);
+    }
+    private static ClassScheduleDto Map(ClassSchedule x,Guid userId)=>new(x.Id,x.Name,x.Description,x.StartsAt,x.EndsAt,x.Capacity,x.Bookings.Count(b=>b.Status==BookingStatus.Confirmed),x.Bookings.Count(b=>b.Status==BookingStatus.Waitlisted),x.InstructorUserId,x.Bookings.SingleOrDefault(b=>b.UserId==userId)?.Status.ToString());
+}

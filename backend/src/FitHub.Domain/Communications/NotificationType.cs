@@ -1,0 +1,2 @@
+namespace FitHub.Domain.Communications;
+public enum NotificationType{MembershipExpiry,ClassReminder,WorkoutConsistency,StreakWarning,PersonalRecord,FaultReportStatusUpdate}
