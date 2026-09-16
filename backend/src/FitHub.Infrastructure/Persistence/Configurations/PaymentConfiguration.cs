@@ -13,6 +13,8 @@ public sealed class PaymentConfiguration : EntityConfiguration<Payment>
         builder.Property(payment => payment.Status).HasConversion<string>().HasMaxLength(30);
         builder.Property(payment => payment.PurchaseKind).HasConversion<string>().HasMaxLength(30);
         builder.Property(payment => payment.ProviderReference).HasMaxLength(200);
+        builder.Property(payment => payment.StripePaymentIntentId).HasMaxLength(200);
+        builder.Property(payment => payment.RefundedAmount).HasPrecision(12, 2);
         builder.Property(payment => payment.FailureReason).HasMaxLength(500);
         builder.HasOne(payment => payment.User).WithMany().HasForeignKey(payment => payment.UserId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(payment => payment.Membership).WithMany().HasForeignKey(payment => payment.MembershipId).OnDelete(DeleteBehavior.SetNull);
@@ -21,5 +23,6 @@ public sealed class PaymentConfiguration : EntityConfiguration<Payment>
         builder.HasIndex(payment => payment.MembershipId);
         builder.HasIndex(payment => payment.MembershipPlanId);
         builder.HasIndex(payment => payment.ProviderReference).IsUnique();
+        builder.HasIndex(payment => payment.StripePaymentIntentId).IsUnique();
     }
 }

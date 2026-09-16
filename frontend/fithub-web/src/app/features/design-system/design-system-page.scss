@@ -1,0 +1,25 @@
+:host { display: block; min-width: 0; }
+.design-system-page { display: grid; gap: var(--space-8); margin: 0 auto; max-width: 76rem; padding: clamp(var(--space-5), 4vw, var(--space-10)); }
+.section-heading { display: grid; gap: var(--space-1); margin-bottom: var(--space-4); }
+.section-heading h2 { font-size: var(--font-size-xl); margin: 0; }
+.section-heading p { color: var(--color-text-secondary); margin: 0; }
+.theme-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.theme-sample { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-card); color: var(--color-text-primary); display: grid; gap: var(--space-3); min-width: 0; padding: var(--space-4); }
+.theme-sample p { color: var(--color-text-muted); font-size: var(--font-size-sm); margin: 0; min-height: 4.2rem; }
+.sample-accent { background: var(--color-accent); border-radius: var(--radius-pill); height: .35rem; width: 3rem; }
+.component-row { align-items: center; display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.metric-grid-preview { display: grid; gap: var(--space-4); grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.state-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.state-grid fit-error-state { grid-column: 1 / -1; }
+.form-preview { display: grid; gap: var(--space-2); max-width: 40rem; }
+.form-preview label { font-size: var(--font-size-sm); font-weight: 750; margin-top: var(--space-2); }
+.form-preview input,
+.form-preview select,
+.form-preview textarea { background: var(--color-surface-interactive); border: 1px solid var(--color-border-strong); border-radius: var(--radius-control); color: var(--color-text-primary); min-height: 2.75rem; padding: var(--space-3); width: 100%; }
+.form-preview small { color: var(--color-text-muted); }
+.mobile-example { background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-card); display: grid; gap: var(--space-4); max-width: 20rem; padding: var(--space-4); }
+.mobile-example h3,
+.mobile-example p { margin: 0; }
+.mobile-example p { color: var(--color-text-secondary); }
+@media (max-width: 64rem) { .theme-grid, .metric-grid-preview { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 40rem) { .design-system-page { gap: var(--space-6); padding: var(--space-4); } .theme-grid, .metric-grid-preview, .state-grid { grid-template-columns: 1fr; } .state-grid fit-error-state { grid-column: auto; } }

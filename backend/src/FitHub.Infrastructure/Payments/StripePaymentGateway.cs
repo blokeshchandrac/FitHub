@@ -13,6 +13,7 @@ internal sealed class StripePaymentGateway(IOptions<StripeOptions> options) : IP
     public async Task<PaymentCheckoutResult> CreateCheckoutAsync(PaymentCheckoutRequest request, CancellationToken cancellationToken = default)
     {
         EnsureSandboxConfiguration();
+        // Stripe credentials remain server-side; the browser receives only the hosted Checkout URL.
         var client = new StripeClient(_options.SecretKey);
         var service = new SessionService(client);
         var session = await service.CreateAsync(new SessionCreateOptions
@@ -65,6 +66,7 @@ internal sealed class StripePaymentGateway(IOptions<StripeOptions> options) : IP
             throw new PaymentWebhookValidationException("Stripe webhook signature or payload is invalid.");
         }
         var session = stripeEvent.Data.Object as Session;
+        var charge = stripeEvent.Data.Object as Charge;
         var outcome = stripeEvent.Type switch
         {
             "checkout.session.completed" when session?.PaymentStatus == "paid" => PaymentWebhookOutcome.Succeeded,
@@ -72,6 +74,7 @@ internal sealed class StripePaymentGateway(IOptions<StripeOptions> options) : IP
             "checkout.session.async_payment_succeeded" => PaymentWebhookOutcome.Succeeded,
             "checkout.session.async_payment_failed" => PaymentWebhookOutcome.Failed,
             "checkout.session.expired" => PaymentWebhookOutcome.Cancelled,
+            "charge.refunded" => PaymentWebhookOutcome.Refunded,
             _ => PaymentWebhookOutcome.Ignored
         };
         var paymentReference = session?.ClientReferenceId;
@@ -88,7 +91,12 @@ internal sealed class StripePaymentGateway(IOptions<StripeOptions> options) : IP
             : null;
         return new PaymentWebhookNotification(
             stripeEvent.Id, stripeEvent.Type, session?.Id ?? string.Empty,
-            paymentId, userId, planId, purchaseKind, outcome);
+            paymentId, userId, planId, purchaseKind, outcome,
+            session?.PaymentIntentId ?? charge?.PaymentIntentId,
+            charge?.AmountRefunded,
+            session?.Currency ?? charge?.Currency,
+            session?.AmountTotal,
+            session?.Livemode ?? charge?.Livemode ?? false);
     }
 
     private void EnsureSandboxConfiguration()

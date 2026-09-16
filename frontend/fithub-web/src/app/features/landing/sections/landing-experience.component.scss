@@ -1,0 +1,213 @@
+:host {
+  display: block;
+}
+#fithub-experience {
+  scroll-margin-top: 4.75rem;
+}
+.experience {
+  background: #080b09;
+  color: #f5f7f2;
+  overflow: hidden;
+  padding: clamp(5rem, 9vw, 8rem) 2rem;
+  position: relative;
+}
+.experience::before {
+  background: radial-gradient(circle, rgb(33 176 135 / 13%), transparent 62%);
+  content: '';
+  height: 38rem;
+  position: absolute;
+  right: -14rem;
+  top: -12rem;
+  width: 38rem;
+}
+.section-heading,
+.journey,
+.trust-heading,
+.trust-points {
+  margin-inline: auto;
+  max-width: 76rem;
+  position: relative;
+}
+.section-label {
+  color: var(--landing-accent);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.18em;
+  margin: 0 0 0.9rem;
+}
+h2 {
+  font-size: clamp(2.35rem, 5.4vw, 5rem);
+  font-weight: 920;
+  letter-spacing: -0.065em;
+  line-height: 0.92;
+  margin: 0;
+  max-width: 16ch;
+}
+.journey {
+  counter-reset: step;
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(3, 1fr);
+  list-style: none;
+  margin-top: 4.5rem;
+  padding: 0;
+}
+.journey::before {
+  background: linear-gradient(90deg, var(--landing-accent), rgb(255 255 255 / 16%));
+  content: '';
+  height: 1px;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 2.7rem;
+}
+.journey li {
+  padding: 0 clamp(1rem, 3vw, 2.5rem) 0 0;
+  position: relative;
+}
+.journey li::before {
+  background: var(--landing-accent);
+  border: 5px solid #080b09;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--landing-accent);
+  content: '';
+  height: 0.85rem;
+  left: 0.05rem;
+  position: absolute;
+  top: 2.3rem;
+  width: 0.85rem;
+}
+.step-number {
+  color: rgb(255 255 255 / 26%);
+  display: block;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  margin-bottom: 3.5rem;
+}
+.step-label {
+  color: var(--landing-accent);
+  font-size: 0.67rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  margin: 0 0 0.65rem;
+}
+.journey h3 {
+  font-size: clamp(1.35rem, 2.2vw, 1.8rem);
+  letter-spacing: -0.04em;
+  margin: 0;
+}
+.journey li > p:last-child {
+  color: #aab3aa;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  margin: 0.8rem 0 0;
+  max-width: 20rem;
+}
+.trust {
+  background: #f3f4ef;
+  color: #111411;
+  padding: clamp(5rem, 9vw, 8rem) 2rem;
+}
+.trust-heading {
+  display: grid;
+  gap: 0 4rem;
+  grid-template-columns: minmax(16rem, 0.8fr) minmax(18rem, 1.2fr);
+}
+.trust-heading .section-label {
+  color: #397500;
+  grid-column: 1/-1;
+}
+.trust-heading h2 {
+  max-width: 11ch;
+}
+.trust-heading > p:last-child {
+  color: #506056;
+  font-size: clamp(1rem, 1.5vw, 1.18rem);
+  line-height: 1.7;
+  margin: 0.2rem 0 0;
+  max-width: 39rem;
+}
+.trust-points {
+  border-top: 1px solid #bcc3ba;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 4rem;
+}
+.trust-points article {
+  padding: 2rem clamp(1rem, 2.2vw, 2rem) 0 0;
+}
+.trust-points article + article {
+  border-left: 1px solid #cbd0c8;
+  padding-left: clamp(1rem, 2.2vw, 2rem);
+}
+.trust-points span {
+  color: #5d6d60;
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+.trust-points h3 {
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  margin: 1.4rem 0 0.65rem;
+}
+.trust-points p {
+  color: #59645b;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  margin: 0;
+}
+@media (max-width: 760px) {
+  .experience,
+  .trust {
+    padding-inline: 1.1rem;
+  }
+  .journey {
+    gap: 2.4rem;
+    grid-template-columns: 1fr;
+    margin-top: 3rem;
+    padding-left: 1.8rem;
+  }
+  .journey::before {
+    background: linear-gradient(var(--landing-accent), rgb(255 255 255 / 16%));
+    bottom: 0;
+    height: auto;
+    left: 0.35rem;
+    right: auto;
+    top: 0.25rem;
+    width: 1px;
+  }
+  .journey li {
+    padding: 0;
+  }
+  .journey li::before {
+    border-width: 4px;
+    left: -1.8rem;
+    top: 0.1rem;
+  }
+  .step-number {
+    margin-bottom: 1rem;
+  }
+  .journey li > p:last-child {
+    max-width: 34rem;
+  }
+  .trust-heading {
+    gap: 1.2rem;
+    grid-template-columns: 1fr;
+  }
+  .trust-heading .section-label {
+    grid-column: auto;
+  }
+  .trust-points {
+    grid-template-columns: 1fr;
+    margin-top: 3rem;
+  }
+  .trust-points article {
+    padding: 1.5rem 0.2rem;
+  }
+  .trust-points article + article {
+    border-left: 0;
+    border-top: 1px solid #cbd0c8;
+    padding-left: 0.2rem;
+  }
+}

@@ -1,0 +1,18 @@
+<section class="onboarding-welcome">
+  <div class="onboarding-copy"><p class="eyebrow">Welcome to FitHub</p><h1>Let’s personalize your experience.</h1><p>These details help FitHub tailor your member dashboard and rule-based recommendations. You can update them later.</p></div>
+  <form class="foundation-card form-stack" [formGroup]="form" (ngSubmit)="submit()">
+    <label for="preferred-name">Preferred name</label><input id="preferred-name" formControlName="preferredName" autocomplete="nickname">
+    @if(form.controls.preferredName.touched&&form.controls.preferredName.invalid){<p class="field-error">Enter a preferred name of up to 50 characters.</p>}
+    <label for="date-of-birth">Date of birth</label><input id="date-of-birth" type="date" formControlName="dateOfBirth">
+    <div class="two-column"><label>Height (cm)<input type="number" formControlName="heightCm" min="80" max="250" step="0.1"></label><label>Weight (kg)<input type="number" formControlName="weightKg" min="25" max="350" step="0.1"></label></div>
+    <label for="fitness-goal">Primary fitness goal</label><select id="fitness-goal" formControlName="fitnessGoal">@for(goal of goals;track goal.value){<option [value]="goal.value">{{goal.label}}</option>}</select>
+    <label for="activity-level">Activity level</label><select id="activity-level" formControlName="activityLevel">@for(level of activities;track level.value){<option [value]="level.value">{{level.label}}</option>}</select>
+    <label for="experience-level">Training experience</label><select id="experience-level" formControlName="experienceLevel">@for(level of experienceLevels;track level){<option [value]="level">{{level}}</option>}</select>
+    <fieldset><legend>Planned training days</legend><div class="choice-grid">@for(day of trainingDays;track day){<label><input type="checkbox" [checked]="isDaySelected(day)" (change)="toggleDay(day, $event)"> {{day}}</label>}</div></fieldset>
+    @if(form.controls.plannedTrainingDays.touched&&form.controls.plannedTrainingDays.invalid){<p class="field-error">Select at least one planned training day.</p>}
+    <label for="preferred-branch">Preferred gym branch</label><select id="preferred-branch" formControlName="preferredGymBranchId"><option value="">Choose a branch</option>@for(branch of branches();track branch.id){<option [value]="branch.id">{{branch.name}} ({{branch.code}})</option>}</select>
+    @if(!loading()&&branches().length===0){<p class="field-error">No active gym branch is available. Ask an administrator for help.</p>}
+    @if(error()){<div class="api-error" role="alert">{{error()}}</div>}
+    <button class="primary-button" type="submit" [disabled]="submitting()||loading()||branches().length===0">{{submitting()?'Saving…':'Continue'}}</button>
+  </form>
+</section>

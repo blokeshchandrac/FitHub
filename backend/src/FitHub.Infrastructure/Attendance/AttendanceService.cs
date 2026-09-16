@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using FitHub.Application.Attendance;
+using FitHub.Application.Equipment;
 using FitHub.Domain.Attendance;
 using FitHub.Domain.Memberships;
 using FitHub.Domain.Payments;
@@ -10,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FitHub.Infrastructure.AttendanceServices;
 
-internal sealed class AttendanceService(FitHubDbContext dbContext, TimeProvider timeProvider) : IAttendanceService
+internal sealed class AttendanceService(FitHubDbContext dbContext, ICardUidHasher cardUidHasher, TimeProvider timeProvider) : IAttendanceService
 {
     public async Task<CheckInTokenDto> GenerateTokenAsync(Guid userId, CancellationToken cancellationToken = default)
     {
@@ -40,6 +41,9 @@ internal sealed class AttendanceService(FitHubDbContext dbContext, TimeProvider 
         var now = timeProvider.GetUtcNow();
         token.Use(now);
 
+        if (!await dbContext.Users.AnyAsync(item => item.Id == token.UserId && item.IsActive, cancellationToken))
+            throw new InvalidOperationException("The member account is disabled.");
+
         var membershipActive = await dbContext.Memberships.AnyAsync(item =>
             item.UserId == token.UserId && item.Status == MembershipStatus.Active && item.StartsAt <= now && item.EndsAt > now,
             cancellationToken);
@@ -57,6 +61,32 @@ internal sealed class AttendanceService(FitHubDbContext dbContext, TimeProvider 
         }
 
         return new CheckInResultDto(attendance.Id, attendance.UserId, attendance.CheckedInAt);
+    }
+
+    public async Task<AccessValidationDto> ValidateAccessAsync(string rawToken, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(rawToken) || rawToken.Trim().Length > 200)
+            return Result(AccessValidationCodes.InvalidToken, "The token or card is not recognized.");
+
+        var value = rawToken.Trim();
+        var cardHash = cardUidHasher.Hash(value);
+        var card = await dbContext.MemberAccessCards.AsNoTracking().Include(x => x.User)
+            .SingleOrDefaultAsync(x => x.UidHash == cardHash, cancellationToken);
+        if (card is not null)
+        {
+            if (!card.User.IsActive) return UserResult(AccessValidationCodes.UserDisabled, "The member account is disabled.", "Card", card.User);
+            if (!card.IsActive) return UserResult(AccessValidationCodes.Blocked, "The membership card is blocked.", "Card", card.User);
+            return await MembershipResultAsync(card.User, "Card", cancellationToken);
+        }
+
+        var token = await dbContext.AttendanceCheckInTokens.AsNoTracking().Include(x => x.User)
+            .SingleOrDefaultAsync(x => x.TokenHash == Hash(value), cancellationToken);
+        if (token is null || token.UsedAt is not null)
+            return Result(AccessValidationCodes.InvalidToken, "The token or card is not recognized.");
+        if (!token.User.IsActive) return UserResult(AccessValidationCodes.UserDisabled, "The member account is disabled.", "QR token", token.User);
+        if (token.ExpiresAt <= timeProvider.GetUtcNow())
+            return UserResult(AccessValidationCodes.Expired, "The temporary check-in token has expired.", "QR token", token.User);
+        return await MembershipResultAsync(token.User, "QR token", cancellationToken);
     }
 
     public async Task<AttendanceSummaryDto> GetSummaryAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -95,4 +125,23 @@ internal sealed class AttendanceService(FitHubDbContext dbContext, TimeProvider 
 
     private static string Hash(string value) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
+
+    private async Task<AccessValidationDto> MembershipResultAsync(
+        Domain.Identity.ApplicationUser user, string credentialType, CancellationToken cancellationToken)
+    {
+        var now = timeProvider.GetUtcNow();
+        var membership = await dbContext.Memberships.AsNoTracking().Where(x => x.UserId == user.Id)
+            .OrderByDescending(x => x.EndsAt).FirstOrDefaultAsync(cancellationToken);
+        if (membership is null)
+            return UserResult(AccessValidationCodes.MembershipInactive, "The member has no active membership.", credentialType, user);
+        if (membership.EndsAt <= now || membership.Status == MembershipStatus.Expired)
+            return UserResult(AccessValidationCodes.Expired, "The membership has expired.", credentialType, user, membership.EndsAt);
+        if (!membership.IsActiveAt(now))
+            return UserResult(AccessValidationCodes.MembershipInactive, "The membership is not active.", credentialType, user, membership.EndsAt);
+        return UserResult(AccessValidationCodes.Valid, "Access credential is valid.", credentialType, user, membership.EndsAt);
+    }
+
+    private static AccessValidationDto UserResult(string code,string message,string type,Domain.Identity.ApplicationUser user,DateTimeOffset? expires=null) =>
+        new(code,message,type,user.Id,(user.PreferredName ?? (user.FirstName + " " + user.LastName)).Trim(),expires);
+    private static AccessValidationDto Result(string code,string message) => new(code,message,null,null,null,null);
 }

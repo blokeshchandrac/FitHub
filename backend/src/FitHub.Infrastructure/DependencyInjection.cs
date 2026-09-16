@@ -14,6 +14,8 @@ using FitHub.Application.Recommendations;
 using FitHub.Application.Administration;
 using FitHub.Application.Bookings;
 using FitHub.Application.Notifications;
+using FitHub.Application.Profiles;
+using FitHub.Application.Trainers;
 using FitHub.Infrastructure.AttendanceServices;
 using FitHub.Infrastructure.Authentication;
 using FitHub.Infrastructure.Authorization;
@@ -29,6 +31,8 @@ using FitHub.Infrastructure.Recommendations;
 using FitHub.Infrastructure.Administration;
 using FitHub.Infrastructure.Bookings;
 using FitHub.Infrastructure.Notifications;
+using FitHub.Infrastructure.Profiles;
+using FitHub.Infrastructure.Trainers;
 using FitHub.Domain.Parking;
 using FitHub.Domain.Equipment;
 using FitHub.Infrastructure.Persistence;
@@ -81,6 +85,8 @@ public static class DependencyInjection
         services.AddScoped<IMembershipService, MembershipService>();
         services.AddScoped<IAttendanceService, AttendanceService>();
         services.AddScoped<IPaymentGateway, StripePaymentGateway>();
+        services.AddScoped<IPaymentCheckoutVerifier, StripeCheckoutVerifier>();
+        services.AddScoped<IPaymentReconciliationService, PaymentReconciliationService>();
         services.AddScoped<IPaymentWebhookService, PaymentWebhookService>();
         services.AddScoped<IWorkoutService, WorkoutService>();
         services.AddScoped<IProgressService, ProgressService>();
@@ -92,11 +98,17 @@ public static class DependencyInjection
         services.AddScoped<IFaultReportService, FaultReportService>();
         services.AddScoped<IPhotoStorage, LocalPhotoStorage>();
         services.AddScoped<IParkingService, ParkingService>();
+        services.AddScoped<IParkingSimulationService, ParkingSimulationService>();
         services.AddScoped<IParkingCameraAuthenticator, ParkingCameraAuthenticator>();
         services.AddScoped<IRecommendationService, RecommendationService>();
         services.AddScoped<IAdministratorDashboardService, AdministratorDashboardService>();
         services.AddScoped<IClassBookingService, ClassBookingService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IProfileService, ProfileService>();
+        services.AddScoped<IAdministrationManagementService, AdministrationManagementService>();
+        services.AddScoped<TrainerMemberAssignmentService>();
+        services.AddScoped<ITrainerMemberAssignmentService>(provider => provider.GetRequiredService<TrainerMemberAssignmentService>());
+        services.AddScoped<ITrainerMemberAccessService>(provider => provider.GetRequiredService<TrainerMemberAssignmentService>());
         services.AddScoped<IPasswordHasher<EquipmentDevice>, PasswordHasher<EquipmentDevice>>();
         services.AddScoped<IPasswordHasher<ParkingCamera>, PasswordHasher<ParkingCamera>>();
         services.AddScoped<IAuthorizationHandler, ActiveMembershipHandler>();
@@ -129,6 +141,19 @@ public static class DependencyInjection
                 };
                 options.Events = new JwtBearerEvents
                 {
+                    OnTokenValidated = async context =>
+                    {
+                        if (!Guid.TryParse(context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+                        {
+                            context.Fail("Authenticated user identifier is invalid.");
+                            return;
+                        }
+                        var db = context.HttpContext.RequestServices.GetRequiredService<FitHubDbContext>();
+                        if (!await db.Users.AsNoTracking().AnyAsync(x => x.Id == userId && x.IsActive, context.HttpContext.RequestAborted))
+                        {
+                            context.Fail("User account is disabled.");
+                        }
+                    },
                     OnMessageReceived = context =>
                     {
                         var token = context.Request.Query["access_token"];

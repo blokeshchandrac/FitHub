@@ -1,0 +1,132 @@
+<div class="virtual-lab">
+  <header class="lab-topbar">
+    <a class="lab-brand" routerLink="/simulation" aria-label="Return to simulation selection"><span>FH</span><strong>FitHub</strong></a>
+    <div class="lab-title"><p>Smart Equipment</p><h1>Virtual Lab</h1></div>
+    <div class="topbar-actions">
+      <span class="mode-indicator" [class.connected]="engine.mode() === 'connected'"><i aria-hidden="true"></i>{{ engine.mode() === 'connected' ? 'Connected Mode' : 'Local Mode' }}</span>
+      <button type="button" (click)="toggleMode()" [disabled]="modeChanging()">{{ modeChanging() ? 'Connecting…' : engine.mode() === 'connected' ? 'Use Local Mode' : 'Try Connected Mode' }}</button>
+      <span class="connection-feedback" aria-live="polite">{{ api.connectionMessage() }}</span>
+      <label class="sound-toggle"><input type="checkbox" [checked]="soundEnabled()" (change)="soundEnabled.set(!soundEnabled())" /> Sound off</label>
+      <a routerLink="/simulation">All simulations</a>
+      <a routerLink="/login">FitHub application</a>
+    </div>
+  </header>
+
+  <main class="lab-content">
+    <section class="scene-column" aria-labelledby="gym-scene-title">
+      <div class="scene-toolbar">
+        <div><p class="lab-kicker">Playable three-dimensional gym</p><h2 id="gym-scene-title">Select a machine, scan a card, test the hardware</h2></div>
+        <div class="machine-selector" aria-label="Select equipment">
+          @for (machine of engine.machines(); track machine.id) {
+            <button type="button" [class.selected]="engine.selectedMachineId() === machine.id" [attr.aria-pressed]="engine.selectedMachineId() === machine.id" (click)="selectMachine(machine)">
+              <span class="mini-light" [attr.data-state]="machine.state" aria-hidden="true"></span>{{ machine.name }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div
+        #sceneHost
+        class="scene-host"
+        [class.webgl-failed]="!webGlAvailable()"
+        (click)="onSceneClick($event)"
+        (dblclick)="onSceneDoubleClick($event)"
+        (pointerdown)="onPointerDown($event)"
+        (pointermove)="onPointerMove($event)"
+        (pointerup)="onPointerUp($event)"
+        (pointercancel)="onPointerUp($event)"
+        (dragover)="onDragOver($event)"
+        (dragleave)="onDragLeave()"
+        (drop)="onCardDrop($event)">
+        @if (!webGlAvailable()) {
+          <div class="webgl-message" role="alert"><strong>3D graphics are unavailable</strong><p>Enable WebGL or use another modern browser. The keyboard controls and event rules remain documented in Help.</p></div>
+        }
+        <div class="scene-help"><span>Click a Member to select</span><span>WASD / arrows to move</span><span>Drag avatars</span><span>Drag to orbit</span><span>Scroll to zoom</span></div>
+        @if (engine.message(); as message) {
+          <div class="toast" [attr.data-tone]="message.tone" role="status"><strong>{{ message.title }}</strong><span>{{ message.detail }}</span></div>
+        }
+      </div>
+
+      <app-simulation-card-tray
+        [members]="engine.members()"
+        [carriedCardId]="engine.carriedCardId()"
+        [selectedMemberId]="engine.selectedMemberId()"
+        [loading]="engine.membersLoading()"
+        [error]="engine.membersError()"
+        (refreshRequested)="refreshMembers()"
+        (memberSelected)="engine.selectMember($event)"
+        (overrideChanged)="changeMemberOverride($event.memberId, $event.statusOverride)"
+        (entranceScan)="scanEntrance($event)"
+        (machineScan)="scanMachine($event)"
+        (memberActions)="openMemberActions($event)"
+        (returnCard)="returnCard($event)" />
+    </section>
+
+    @if (engine.selectedMachine(); as machine) {
+      <app-simulation-workbench
+        [machine]="machine"
+        [memberNames]="machineMemberNames(machine)"
+        [activeSignal]="engine.signalWire()"
+        (wireToggled)="toggleWire($event)"
+        (finishPressed)="finishSelected()"
+        (sharingPressed)="toggleSharing()"
+        (safetyChanged)="changeSafetyLock($event)" />
+    }
+
+    @if (engine.selectedMachine(); as machine) {
+      <app-simulation-hud
+        [machine]="machine"
+        [members]="engine.members()"
+        [events]="engine.events()"
+        [mode]="engine.mode()"
+        [backendState]="api.backendState()"
+        [signalRState]="api.signalRState()"
+        [clearanceSeconds]="engine.clearanceSeconds()"
+        (helpRequested)="helpOpen.set(true)"
+        (resetRequested)="resetOpen.set(true)" />
+    }
+  </main>
+
+  @if (memberMenu(); as menu) {
+    @if (menuMember(); as member) {
+      <aside #memberMenuElement class="member-menu" [style.left.px]="menu.left" [style.top.px]="menu.top" role="dialog" aria-modal="false" [attr.aria-label]="'Actions for ' + member.name">
+        <header><div><small>Virtual Member</small><strong>{{ member.name }}</strong></div><button type="button" (click)="memberMenu.set(null)" aria-label="Close Member actions">×</button></header>
+        <button type="button" (click)="showMemberStatus(member.id)">View Member Status</button>
+        <button type="button" (click)="takeCard(member.id)" [disabled]="!member.hasCard">Take NFC Card</button>
+        <button type="button" (click)="returnCard(member.id)" [disabled]="engine.carriedCardId() !== member.cardId">Return NFC Card</button>
+        <button type="button" (click)="sendMember(member.id)">Send to Selected Machine</button>
+        <button type="button" (click)="moveMemberToOpenFloor(member.id)">Move to Open Floor</button>
+        <button type="button" (click)="finishMember(member.id)" [disabled]="!member.machineId">Finish Current Session</button>
+        <button type="button" class="danger" (click)="removeMember(member.id)">Remove Member from Gym</button>
+      </aside>
+    }
+  }
+
+  @if (helpOpen()) {
+    <div class="dialog-backdrop" (click)="helpOpen.set(false)">
+      <section class="instructions" role="dialog" aria-modal="true" aria-labelledby="instructions-title" (click)="$event.stopPropagation()">
+        <header><div><p class="lab-kicker">How to play</p><h2 id="instructions-title">Smart Equipment Virtual Lab</h2></div><button type="button" (click)="helpOpen.set(false)" aria-label="Close instructions">×</button></header>
+        <ol>
+          <li>Refresh Members to load existing Member names and statuses from the development FitHub database.</li>
+          <li>Choose a session-only status scenario, then scan that Member’s card at the entrance.</li>
+          <li>Click the avatar to select it. Move with <strong>WASD</strong>, arrow keys, or pointer dragging; hold Shift for a small speed boost.</li>
+          <li>Double-click the avatar, take its card, then drag it onto a machine’s <strong>TAP HERE</strong> reader.</li>
+          <li>Move every assigned Member outside the blue sensor volume. A real-time 30-second clearance countdown starts.</li>
+          <li>Return during the countdown to cancel it, or remain clear until automatic release completes.</li>
+          <li>Select workbench wires to test power, PN532, sensor, and LED failures without changing Member database records.</li>
+        </ol>
+        <p><strong>Local Mode</strong> applies rules in this browser after loading the development Member catalogue. <strong>Connected Mode</strong> also validates current database status and sends isolated simulation events through the API and SignalR hub.</p>
+        <button type="button" class="accent-button" (click)="helpOpen.set(false)">Start laboratory</button>
+      </section>
+    </div>
+  }
+
+  @if (resetOpen()) {
+    <div class="dialog-backdrop">
+      <section class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="reset-title" aria-describedby="reset-detail">
+        <h2 id="reset-title">Reset the simulation?</h2><p id="reset-detail">All virtual Members, cards, machine states, and wiring faults will return to the starting state.</p>
+        <div><button type="button" (click)="resetOpen.set(false)">Keep playing</button><button type="button" class="accent-button" (click)="confirmReset()">Reset simulation</button></div>
+      </section>
+    </div>
+  }
+</div>

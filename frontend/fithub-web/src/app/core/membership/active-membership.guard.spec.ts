@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRouteSnapshot, provideRouter, Router, RouterStateSnapshot, UrlTree } from '@angular/router';
 import { firstValueFrom, Observable } from 'rxjs';
 import { AuthenticationService } from '../authentication/authentication.service';
-import { activeMembershipGuard } from './active-membership.guard';
+import { activeMembershipGuard, onboardingCompleteGuard } from './active-membership.guard';
 
 describe('activeMembershipGuard', () => {
   beforeEach(() => TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])] }));
@@ -40,13 +40,20 @@ describe('activeMembershipGuard', () => {
     TestBed.inject(HttpTestingController).expectNone('/api/membership');
   });
 
+  it.each(['Trainer', 'Administrator'])('does not send %s through Member fitness onboarding', async (role) => {
+    await authenticate(role, false);
+    const result = TestBed.runInInjectionContext(() => onboardingCompleteGuard(
+      {} as ActivatedRouteSnapshot, { url: '/account' } as RouterStateSnapshot));
+    expect(result).toBe(true);
+  });
+
   function evaluate(url: string): Observable<boolean | UrlTree> | boolean | UrlTree {
     return TestBed.runInInjectionContext(() => activeMembershipGuard({} as ActivatedRouteSnapshot, { url } as RouterStateSnapshot)) as Observable<boolean | UrlTree> | boolean | UrlTree;
   }
 
-  async function authenticate(role: string): Promise<void> {
+  async function authenticate(role: string, onboardingCompleted = true): Promise<void> {
     const result = firstValueFrom(TestBed.inject(AuthenticationService).login({ email: `${role}@test.local`, password: 'Password-42!' }));
-    TestBed.inject(HttpTestingController).expectOne('/api/auth/login').flush({ accessToken: 'token', expiresAt: '2026-08-14T00:00:00Z', user: { id: '1', email: `${role}@test.local`, firstName: role, lastName: 'Test', roles: [role] } });
+    TestBed.inject(HttpTestingController).expectOne('/api/auth/login').flush({ accessToken: 'token', expiresAt: '2026-08-14T00:00:00Z', user: { id: '1', email: `${role}@test.local`, firstName: role, lastName: 'Test', roles: [role], onboardingCompleted } });
     await result;
   }
 

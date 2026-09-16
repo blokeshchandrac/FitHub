@@ -1,0 +1,5 @@
+<div class="skeleton" role="status" [attr.aria-label]="label()">
+  <span class="visually-hidden">{{ label() }}</span>
+  <span class="skeleton-title" aria-hidden="true"></span>
+  @for (_line of lineItems(); track $index) { <span class="skeleton-line" aria-hidden="true"></span> }
+</div>

@@ -36,6 +36,7 @@ public sealed class AuthenticationApiTests : IAsyncLifetime
             builder.UseEnvironment("Testing");
             builder.UseSetting("ConnectionStrings:FitHubDatabase", _postgres.GetConnectionString());
             builder.UseSetting("Jwt:SigningKey", SigningKey);
+            builder.UseSetting("EquipmentDevices:CardUidPepper", "test-only-card-uid-pepper");
             builder.UseSetting("SeedData:Enabled", "false");
             builder.UseSetting("SeedData:DemoPassword", ValidPassword);
             builder.UseSetting("SeedData:Accounts:0:Email", "no-membership@fithub.demo");
@@ -228,18 +229,206 @@ public sealed class AuthenticationApiTests : IAsyncLifetime
         Assert.DoesNotContain("ActiveMembershipHandler", body, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task ActiveMemberCanAccessPersonalMemberEndpoint()
+    {
+        using var client = CreateClient();
+        var token = await LoginAndGetAccessTokenAsync(client, "member.auth@fithub.test");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/dashboard");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        using var response = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
     [Theory]
-    [InlineData("member.auth@fithub.test")]
     [InlineData("trainer.auth@fithub.test")]
     [InlineData("admin.auth@fithub.test")]
-    public async Task ActiveMemberAndStaffCanAccessMembershipProtectedEndpoint(string email)
+    public async Task StaffCannotAccessPersonalMemberEndpoint(string email)
     {
         using var client = CreateClient();
         var token = await LoginAndGetAccessTokenAsync(client, email);
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/dashboard");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         using var response = await client.SendAsync(request);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("trainer.auth@fithub.test")]
+    [InlineData("admin.auth@fithub.test")]
+    public async Task StaffCannotAccessPersonalMembershipOverview(string email)
+    {
+        using var client = CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", await LoginAndGetAccessTokenAsync(client, email));
+        using var response = await client.GetAsync("/api/membership");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("/api/equipment")]
+    [InlineData("/api/parking")]
+    public async Task FacilityOperationsAllowAdministratorButNotTrainer(string path)
+    {
+        using var client = CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", await LoginAndGetAccessTokenAsync(client, "trainer.auth@fithub.test"));
+        using var trainer = await client.GetAsync(path);
+        Assert.Equal(HttpStatusCode.Forbidden, trainer.StatusCode);
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", await LoginAndGetAccessTokenAsync(client, "admin.auth@fithub.test"));
+        using var administrator = await client.GetAsync(path);
+        Assert.Equal(HttpStatusCode.OK, administrator.StatusCode);
+    }
+
+    [Fact]
+    public async Task NewMemberCompletesOnboardingOnceThroughProfileApi()
+    {
+        using var client = CreateClient();
+        var email = $"onboarding-{Guid.NewGuid():N}@fithub.test";
+        using var registration = await client.PostAsJsonAsync("/api/auth/register", new
+        {
+            email,
+            firstName = "New",
+            lastName = "Member",
+            password = ValidPassword
+        });
+        registration.EnsureSuccessStatusCode();
+        var auth = await registration.Content.ReadFromJsonAsync<AuthenticationPayload>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.AccessToken);
+
+        using var before = await client.GetAsync("/api/auth/me");
+        var beforeBody = await before.Content.ReadAsStringAsync();
+        Assert.Contains("\"onboardingCompleted\":false", beforeBody, StringComparison.OrdinalIgnoreCase);
+
+        Guid branchId;
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var branch = new GymBranch("ONBOARD", "Onboarding Test Branch");
+            scope.ServiceProvider.GetRequiredService<FitHubDbContext>().GymBranches.Add(branch);
+            await scope.ServiceProvider.GetRequiredService<FitHubDbContext>().SaveChangesAsync();
+            branchId = branch.Id;
+        }
+
+        using var update = await client.PutAsJsonAsync("/api/profile", new
+        {
+            preferredName = "Newbie",
+            dateOfBirth = new DateOnly(1998, 5, 20),
+            heightCm = 175.5m,
+            weightKg = 72.4m,
+            fitnessGoal = "Strength",
+            activityLevel = "Moderate",
+            experienceLevel = "Beginner",
+            plannedTrainingDays = new[] { "Monday", "Wednesday" },
+            preferredGymBranchId = branchId
+        });
+        update.EnsureSuccessStatusCode();
+
+        using var after = await client.GetAsync("/api/auth/me");
+        var afterBody = await after.Content.ReadAsStringAsync();
+        Assert.Contains("\"onboardingCompleted\":true", afterBody, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task TrainerClassRequiresApprovalBeforeMemberCanSeeIt()
+    {
+        using var client = CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", await LoginAndGetAccessTokenAsync(client, "trainer.auth@fithub.test"));
+        var start = DateTimeOffset.UtcNow.AddDays(3);
+        using var create = await client.PostAsJsonAsync("/api/trainer/classes", new
+        {
+            name = "Approval integration class",
+            description = "Pending until an administrator reviews it.",
+            startsAt = start,
+            endsAt = start.AddHours(1),
+            capacity = 12,
+            location = "Studio 2"
+        });
+        create.EnsureSuccessStatusCode();
+        var schedule = await create.Content.ReadFromJsonAsync<ClassSchedulePayload>();
+        Assert.Equal("PendingApproval", schedule!.Status);
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", await LoginAndGetAccessTokenAsync(client, "member.auth@fithub.test"));
+        var beforeApproval = await client.GetFromJsonAsync<ClassSchedulePayload[]>("/api/classes");
+        Assert.DoesNotContain(beforeApproval!, item => item.Id == schedule.Id);
+        using var memberCreateAttempt = await client.PostAsJsonAsync("/api/trainer/classes", new
+        {
+            name = "Forbidden", startsAt = start, endsAt = start.AddHours(1), capacity = 5
+        });
+        Assert.Equal(HttpStatusCode.Forbidden, memberCreateAttempt.StatusCode);
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", await LoginAndGetAccessTokenAsync(client, "admin.auth@fithub.test"));
+        using var approve = await client.PutAsJsonAsync($"/api/administration/classes/{schedule.Id}/review", new
+        {
+            approve = true,
+            reason = (string?)null
+        });
+        approve.EnsureSuccessStatusCode();
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", await LoginAndGetAccessTokenAsync(client, "member.auth@fithub.test"));
+        var afterApproval = await client.GetFromJsonAsync<ClassSchedulePayload[]>("/api/classes");
+        Assert.Contains(afterApproval!, item => item.Id == schedule.Id && item.Status == "Approved");
+    }
+
+    [Fact]
+    public async Task OnlyAdministratorCanCreateTrainerAccount()
+    {
+        using var client = CreateClient();
+        var email = $"trainer-{Guid.NewGuid():N}@fithub.test";
+        var request = new { email, firstName = "Created", lastName = "Trainer", temporaryPassword = ValidPassword };
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", await LoginAndGetAccessTokenAsync(client, "trainer.auth@fithub.test"));
+        using var trainerAttempt = await client.PostAsJsonAsync("/api/administration/trainers", request);
+        Assert.Equal(HttpStatusCode.Forbidden, trainerAttempt.StatusCode);
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", await LoginAndGetAccessTokenAsync(client, "admin.auth@fithub.test"));
+        using var adminAttempt = await client.PostAsJsonAsync("/api/administration/trainers", request);
+        Assert.Equal(HttpStatusCode.Created, adminAttempt.StatusCode);
+
+        client.DefaultRequestHeaders.Authorization = null;
+        _ = await LoginAndGetAccessTokenAsync(client, email);
+    }
+
+    [Fact]
+    public async Task BlockingUserInvalidatesExistingAccessToken()
+    {
+        var email = $"blocked-{Guid.NewGuid():N}@fithub.test";
+        Guid userId;
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            await CreateUserAsync(scope.ServiceProvider, email, AuthorizationPolicies.Member);
+            userId = (await scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>().FindByEmailAsync(email))!.Id;
+        }
+
+        using var client = CreateClient();
+        var memberToken = await LoginAndGetAccessTokenAsync(client, email);
+        var adminToken = await LoginAndGetAccessTokenAsync(client, "admin.auth@fithub.test");
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        using var blocked = await client.PutAsJsonAsync($"/api/administration/users/{userId}/active", new { active = false });
+        Assert.Equal(HttpStatusCode.NoContent, blocked.StatusCode);
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", memberToken);
+        using var currentUser = await client.GetAsync("/api/auth/me");
+        Assert.Equal(HttpStatusCode.Unauthorized, currentUser.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdministratorCanValidateButCannotBypassInvalidCredential()
+    {
+        using var client = CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", await LoginAndGetAccessTokenAsync(client, "admin.auth@fithub.test"));
+        using var response = await client.PostAsJsonAsync("/api/attendance/validate-access", new { token = "not-a-real-card" });
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<AccessValidationPayload>();
+        Assert.Equal("INVALID_TOKEN", result!.Code);
     }
 
     [Fact]
@@ -411,6 +600,8 @@ public sealed class AuthenticationApiTests : IAsyncLifetime
     private sealed record AuthenticationPayload(string AccessToken);
     private sealed record PlanPayload(Guid Id, decimal Price);
     private sealed record CheckoutPayload(string CheckoutUrl);
+    private sealed record ClassSchedulePayload(Guid Id, string Status);
+    private sealed record AccessValidationPayload(string Code);
 
     private sealed class CheckoutTestGateway : IPaymentGateway
     {

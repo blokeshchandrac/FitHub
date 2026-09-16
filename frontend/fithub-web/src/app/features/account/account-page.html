@@ -1,0 +1,16 @@
+<section class="feature-page"><p class="eyebrow">Account</p><h1>Your profile</h1>
+@if(authentication.currentUser();as user){<div class="foundation-card metric-grid"><div><span>Name</span><strong>{{user.firstName}} {{user.lastName}}</strong></div><div><span>Email</span><strong>{{user.email}}</strong></div><div><span>Role</span><strong>{{user.roles.join(', ')}}</strong></div></div>}
+@if(authentication.hasRole('Member')){
+  <form class="foundation-card form-stack" [formGroup]="form" (ngSubmit)="save()"><h2>Member details</h2>
+    <label>Preferred name<input formControlName="preferredName" autocomplete="nickname"></label><label>Date of birth<input type="date" formControlName="dateOfBirth"></label>
+    <div class="two-column"><label>Height (cm)<input type="number" formControlName="heightCm" min="80" max="250" step="0.1"></label><label>Weight (kg)<input type="number" formControlName="weightKg" min="25" max="350" step="0.1"></label></div>
+    <label>Fitness goal<select formControlName="fitnessGoal"><option value="GeneralFitness">General fitness</option><option value="WeightManagement">Lose weight</option><option value="MuscleGain">Build muscle</option><option value="Strength">Improve strength</option><option value="Endurance">Improve endurance</option></select></label>
+    <label>Activity level<select formControlName="activityLevel"><option value="Sedentary">Mostly sedentary</option><option value="Light">Lightly active</option><option value="Moderate">Moderately active</option><option value="VeryActive">Very active</option></select></label>
+    <label>Training experience<select formControlName="experienceLevel">@for(level of experienceLevels;track level){<option [value]="level">{{level}}</option>}</select></label>
+    <fieldset><legend>Planned training days</legend><div class="choice-grid">@for(day of trainingDays;track day){<label><input type="checkbox" [checked]="isDaySelected(day)" (change)="toggleDay(day, $event)"> {{day}}</label>}</div></fieldset>
+    @if(form.controls.plannedTrainingDays.touched&&form.controls.plannedTrainingDays.invalid){<p class="field-error">Select at least one planned training day.</p>}
+    <label>Preferred gym branch<select formControlName="preferredGymBranchId"><option value="">Choose a branch</option>@for(branch of branches();track branch.id){<option [value]="branch.id">{{branch.name}} ({{branch.code}})</option>}</select></label>
+    @if(message()){<p class="success-message" role="status">{{message()}}</p>}@if(error()){<p class="api-error" role="alert">{{error()}}</p>}<button class="primary-button" [disabled]="saving()||loading()">{{saving()?'Saving…':'Save profile'}}</button>
+  </form>
+}
+<div class="foundation-card"><fit-theme-selector /></div></section>

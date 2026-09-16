@@ -52,14 +52,14 @@ ASP.NET Core Identity also creates role, claim, login, token, and user-role tabl
 
 | Area | Tables | Important constraints and indexes |
 |---|---|---|
-| Identity | `AspNetUsers`, `RefreshTokens`, and standard Identity tables | Unique normalized username, Identity email index, active-user index; UUID user and role keys; unique SHA-256 refresh-token hash and user/expiry index. |
-| Membership | `MembershipPlans`, `Memberships`, `Payments`, `ProcessedPaymentWebhooks` | Unique plan name; membership user/status and expiry indexes; `numeric(12,2)` authoritative prices and payments; Checkout reference and Stripe event IDs are unique. |
+| Identity | `AspNetUsers`, `RefreshTokens`, and standard Identity tables | Unique normalized username, Identity email index, active-user and onboarding indexes; UUID user and role keys; bounded profile measurements; unique SHA-256 refresh-token hash and user/expiry index. |
+| Membership | `MembershipPlans`, `Memberships`, `Payments`, `ProcessedPaymentWebhooks` | Unique plan name; membership user/status and expiry indexes; `numeric(12,2)` authoritative prices/refunds; Checkout Session, PaymentIntent, and Stripe event IDs are unique. Development seed payments are explicitly marked and excluded from revenue. |
 | Attendance | `Attendances`, `AttendanceCheckInTokens` | User/check-in history indexes; unique SHA-256 token hashes, expiry index, and `xmin` replay concurrency protection. |
 | Workouts | `Exercises`, `WorkoutTemplates`, `WorkoutTemplateExercises`, `WorkoutPlanAssignments`, `WorkoutSessions`, `ExerciseLogs`, `SetLogs` | Unique exercise name; searchable muscle group/equipment indexes; trainer/member assignment indexes; unique exercise order per session; unique set number per exercise log; weights use `numeric(8,2)`. |
 | Progress | `BodyMeasurements` | User/recorded-time index; height, weight, body-fat percentage, and circumference values use bounded fixed precision. |
 | Equipment | `Equipment`, `EquipmentStatusEvents`, `FaultReports`, `FaultReportImages`, `MaintenanceActions` | Unique equipment code; current-state index; chronological status history; fault status/priority indexes; cost uses `numeric(12,2)`. |
 | Parking | `ParkingSpaces`, `ParkingStatusEvents` | Unique space code; zone/current-state index; chronological history index. |
-| Classes | `ClassSchedules`, `ClassBookings` | Positive-capacity and valid-time-range database checks; one booking per user and schedule. |
+| Classes | `ClassSchedules`, `ClassBookings` | Positive-capacity and valid-time-range database checks; approval-status/start and trainer indexes; bounded location/review reason; one booking per user and schedule. |
 | Communication | `Notifications`, `Recommendations` | User/read/status and expiry indexes. |
 | Auditing | `AuditLogs` | Occurrence-time, user, and entity lookup indexes. |
 
@@ -90,7 +90,7 @@ The demo password is read from `SeedData:DemoPassword` (environment variable `Se
 
 ## Migration
 
-The database migrations are `InitialDatabaseFoundation`, `AddAuthenticationFoundation`, `AddMembershipPaymentsAttendance`, and `AddWorkoutProgressDashboard`. Apply them with:
+The latest database migration is `AddRoleWorkflowsAndOnboarding`; it follows the existing Stage 1–8 foundation migrations. Apply all pending migrations with:
 
 ```powershell
 dotnet tool restore --tool-manifest backend/.config/dotnet-tools.json
@@ -106,10 +106,12 @@ dotnet tool run dotnet-ef -- database update --project backend/src/FitHub.Infras
 
 `ParkingSpace` stores its latest state, confidence, source and event time. `ParkingStatusEvent` is the append-only detection/correction history. `ParkingCamera` stores a unique camera code and PBKDF2 credential hash. Legacy Reserved values migrate to Unknown and OutOfService values migrate to Disabled.
 
-`ApplicationUser` stores controlled fitness-goal and activity-level preferences. `Recommendation` now stores `RuleCode` and `Reason` alongside its content; old rows receive explicit legacy provenance rather than losing data.
+`ApplicationUser` stores controlled fitness-goal and activity-level preferences. It also stores the Member onboarding profile: preferred name, date of birth, height, weight, and completion flag. `Recommendation` stores `RuleCode` and `Reason` alongside its content; old rows receive explicit legacy provenance rather than losing data.
 
 ## Stage 8 booking and notification additions
 
-Class schedules retain the instructor foreign key and positive-capacity/time constraints. Class bookings retain the unique class/user key, allowing a cancelled row to be reactivated without duplicates. Capacity decisions use a PostgreSQL row lock on the schedule.
+Class schedules retain the instructor foreign key and positive-capacity/time constraints and add location, approval status, reviewer, review time, and review reason. Existing schedules migrate as Approved; new and edited schedules enter PendingApproval. Class bookings retain the unique class/user key, allowing a cancelled row to be reactivated without duplicates. Capacity decisions use a PostgreSQL row lock on the schedule.
+
+Payments now store the Stripe PaymentIntent identifier, cumulative refunded amount/time, and an explicit development-seed marker. Revenue uses confirmed gross less confirmed refunds and never includes seed demonstration payments.
 
 Notifications now have a controlled type and a unique per-user deduplication key. Existing rows receive a `legacy:{notification UUID}` key during migration so the new unique index does not discard data.

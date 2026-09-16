@@ -1,0 +1,5 @@
+.state { align-items: center; background: var(--color-error-surface); border: 1px solid var(--color-error); border-radius: var(--radius-card); display: grid; gap: var(--space-4); grid-template-columns: auto 1fr auto; padding: var(--space-5); }
+.state-icon { color: var(--color-error); }
+h2 { color: var(--color-text-primary); font-size: var(--font-size-lg); margin: 0 0 var(--space-1); }
+p { color: var(--color-text-secondary); margin: 0; }
+@media (max-width: 30rem) { .state { align-items: start; grid-template-columns: auto 1fr; } fit-button { grid-column: 1 / -1; } }

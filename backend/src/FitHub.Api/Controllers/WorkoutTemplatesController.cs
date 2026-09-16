@@ -9,6 +9,7 @@ namespace FitHub.Api.Controllers;
 
 [ApiController]
 [Authorize(Policy = AuthorizationPolicies.ActiveMembership)]
+[Authorize(Policy = AuthorizationPolicies.Member)]
 [Route("api/workout-templates")]
 public sealed class WorkoutTemplatesController(IWorkoutService workoutService) : ControllerBase
 {

@@ -1,0 +1,67 @@
+<section class="card-tray" aria-labelledby="test-card-title">
+  <div class="tray-heading">
+    <div>
+      <p class="lab-kicker">Development Member catalogue</p>
+      <h2 id="test-card-title">FitHub Member cards</h2>
+    </div>
+    <button class="refresh-button" type="button" (click)="refreshRequested.emit()" [disabled]="loading()">{{ loading() ? 'Refreshing…' : 'Refresh Members' }}</button>
+  </div>
+  @if (error()) { <p class="catalog-message error" role="alert">{{ error() }}</p> }
+  @if (!loading() && !error() && members().length === 0) { <p class="catalog-message">No FitHub test Members are available. Register a Member or seed the development database.</p> }
+  <div class="cards">
+    @for (member of members(); track member.id) {
+      @if (!member.entered) {
+        <article class="nfc-card" draggable="true" (dragstart)="beginDrag($event, member.cardId)">
+          <span class="nfc-symbol" aria-hidden="true">)))</span>
+          <strong>{{ member.name }}</strong>
+          <small>{{ member.cardId }}</small>
+          <span class="card-fact">Membership: {{ member.membershipStatus }}</span>
+          <span class="card-fact">Card: {{ member.cardStatus }} · {{ member.cardSource === 'FIT_HUB_CARD' ? 'FitHub card' : 'session token' }}</span>
+          <button class="secondary" type="button" (click)="memberSelected.emit(member.id)">Select Member</button>
+          <button type="button" (click)="entranceScan.emit(member.cardId)">Scan at entrance</button>
+        </article>
+      }
+    }
+  </div>
+  @if (members().some(member => member.entered)) {
+    <div class="entered-members" aria-label="Members inside the virtual gym">
+      <strong>Inside now</strong>
+      @for (member of members(); track member.id) {
+        @if (member.entered) {
+          <button type="button" [class.selected]="member.id === selectedMemberId()" (click)="memberSelected.emit(member.id)">{{ member.name }} · select</button>
+          <button type="button" (click)="memberActions.emit(member.id)">Actions</button>
+        }
+      }
+    </div>
+  }
+
+  @if (selectedMember(); as member) {
+    <section class="member-inspector" aria-labelledby="selected-member-title">
+      <div><p class="lab-kicker">Selected Member</p><h3 id="selected-member-title">{{ member.name }}</h3><small>Actual: membership {{ member.membershipStatus }}, card {{ member.cardStatus }}, account {{ member.accountStatus }}</small></div>
+      <label>Status scenario
+        <select [value]="member.statusOverride" (change)="changeOverride(member.id, $event)">
+          <option value="Actual">Use actual status</option>
+          <option value="ActiveMembership">Simulate active membership</option>
+          <option value="ExpiredMembership">Simulate expired membership</option>
+          <option value="BlockedCard">Simulate blocked NFC card</option>
+          <option value="SuspendedAccount">Simulate suspended account</option>
+        </select>
+      </label>
+      <p>Session-only override. PostgreSQL records are never changed.</p>
+    </section>
+  }
+</section>
+
+<section class="inventory" aria-labelledby="inventory-title">
+  <div><p class="lab-kicker">Player hand</p><h2 id="inventory-title">Card inventory</h2></div>
+  @if (carriedCardId(); as cardId) {
+    @if (members().find(member => member.cardId === cardId); as member) {
+      <div class="inventory-card" draggable="true" (dragstart)="beginDrag($event, member.cardId)">
+        <strong>{{ member.name }}</strong><small>{{ member.cardId }}</small>
+        <span class="inventory-actions"><button type="button" (click)="machineScan.emit(member.cardId)">Tap selected machine</button><button type="button" (click)="returnCard.emit(member.id)">Return card</button></span>
+      </div>
+    }
+  } @else {
+    <p class="inventory-empty">Double-click an entered Member and choose “Take NFC Card”.</p>
+  }
+</section>

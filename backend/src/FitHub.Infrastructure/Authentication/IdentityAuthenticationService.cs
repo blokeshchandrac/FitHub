@@ -148,7 +148,7 @@ internal sealed class IdentityAuthenticationService(
         }
 
         var roles = await userManager.GetRolesAsync(user);
-        return new CurrentUserDto(user.Id, user.Email ?? string.Empty, user.FirstName, user.LastName, roles.ToArray());
+        return new CurrentUserDto(user.Id, user.Email ?? string.Empty, user.FirstName, user.LastName, roles.ToArray(), user.OnboardingCompleted);
     }
 
     private RefreshToken CreateRefreshToken(Guid userId, AuthenticationTokens tokens, string? ipAddress) =>

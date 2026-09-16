@@ -22,6 +22,12 @@ public sealed class WorkoutPlanAssignment : Entity
     public Guid TrainerUserId { get; private set; }
     public ApplicationUser TrainerUser { get; private set; } = null!;
     public DateTimeOffset AssignedAt { get; private set; }
+    public DateTimeOffset? EndedAt { get; private set; }
     public bool IsActive { get; private set; } = true;
-    public void Deactivate() => IsActive = false;
+    public void Deactivate(DateTimeOffset endedAt)
+    {
+        IsActive = false;
+        EndedAt = endedAt;
+        MarkUpdated(endedAt);
+    }
 }

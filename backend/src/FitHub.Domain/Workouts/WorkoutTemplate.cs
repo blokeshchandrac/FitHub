@@ -10,5 +10,12 @@ public sealed class WorkoutTemplate : Entity
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public bool IsPublic { get; set; }
+    public WorkoutTemplateKind Kind { get; set; } = WorkoutTemplateKind.Personal;
     public ICollection<Exercise> Exercises { get; } = [];
+}
+
+public enum WorkoutTemplateKind
+{
+    Personal,
+    TrainerPlan
 }

@@ -1,0 +1,92 @@
+<section class="design-system-page">
+  <fit-page-header
+    eyebrow="Development preview"
+    title="FitHub design system"
+    description="Checkpoint 1A foundations: semantic tokens, accessible themes, reusable controls and resilient content states."
+  >
+    <fit-status-badge label="Development only" tone="information" />
+  </fit-page-header>
+
+  <fit-section-card heading="Theme preference" description="Every option includes a visible name, description and selected indicator.">
+    <fit-theme-selector />
+  </fit-section-card>
+
+  <section class="theme-reference" aria-labelledby="theme-reference-heading">
+    <div class="section-heading">
+      <h2 id="theme-reference-heading">All theme palettes</h2>
+      <p>Semantic equipment colours retain the same meaning in every theme.</p>
+    </div>
+    <div class="theme-grid">
+      @for (option of themeOptions; track option.id) {
+        <article [attr.data-theme]="option.id" class="theme-sample">
+          <span class="sample-accent" aria-hidden="true"></span>
+          <strong>{{ option.name }}</strong>
+          <p>{{ option.description }}</p>
+          <fit-button size="sm">Primary action</fit-button>
+        </article>
+      }
+    </div>
+  </section>
+
+  <fit-section-card heading="Buttons" description="Clear hover, focus, disabled and busy states without persistent glow.">
+    <div class="component-row">
+      <fit-button>Primary action</fit-button>
+      <fit-button variant="secondary">Secondary action</fit-button>
+      <fit-button variant="quiet">Quiet action</fit-button>
+      <fit-button variant="danger">Danger action</fit-button>
+      <fit-button [disabled]="true">Disabled</fit-button>
+      <fit-button [busy]="true">Saving</fit-button>
+    </div>
+  </fit-section-card>
+
+  <section aria-labelledby="metrics-heading">
+    <div class="section-heading"><h2 id="metrics-heading">Metric cards</h2><p>Compact hierarchy with tabular numbers.</p></div>
+    <div class="metric-grid-preview">
+      <fit-metric-card label="Weekly volume" value="12,480 kg" supportingText="Across four sessions" />
+      <fit-metric-card label="Current streak" value="4 weeks" supportingText="One workout this week" tone="success" />
+      <fit-metric-card label="Visits remaining" value="2" supportingText="To match last week" tone="warning" />
+      <fit-metric-card label="Rest timer" value="01:30" supportingText="Ready for the next set" tone="neutral" />
+    </div>
+  </section>
+
+  <fit-section-card heading="Statuses" description="Text and icons accompany every semantic colour.">
+    <div class="component-row">
+      <fit-status-badge label="Available" tone="success" />
+      <fit-status-badge label="Occupied" tone="error" />
+      <fit-status-badge label="Sharing allowed" tone="warning" />
+      <fit-status-badge label="Maintenance" tone="maintenance" />
+      <fit-status-badge label="Offline" tone="offline" />
+      <fit-status-badge label="Information" tone="information" />
+    </div>
+  </fit-section-card>
+
+  <div class="state-grid">
+    <fit-skeleton-loader label="Loading dashboard preview" [lines]="4" />
+    <fit-empty-state title="No workouts yet" message="Create your first workout when you are ready.">
+      <fit-button variant="secondary">Create workout</fit-button>
+    </fit-empty-state>
+    <fit-error-state message="We could not load this section. Your existing data is safe." />
+  </div>
+
+  <fit-section-card heading="Typical form controls" description="Labels, help text and visible focus are part of the control—not optional decoration.">
+    <form class="form-preview" (submit)="$event.preventDefault()">
+      <label for="preview-name">Workout name</label>
+      <input id="preview-name" value="Upper body strength" aria-describedby="preview-help" />
+      <small id="preview-help">Use a name you can identify quickly during training.</small>
+      <label for="preview-goal">Training goal</label>
+      <select id="preview-goal"><option>General fitness</option><option>Strength</option><option>Endurance</option></select>
+      <label for="preview-notes">Notes</label>
+      <textarea id="preview-notes" rows="3">A deliberately long note demonstrates wrapping without clipping: keep shoulders controlled, record each working set, and stop if movement becomes unsafe.</textarea>
+      <fit-button type="submit">Save preview</fit-button>
+    </form>
+  </fit-section-card>
+
+  <fit-section-card heading="Mobile-width example" description="This framed sample remains readable at 320 CSS pixels.">
+    <div class="mobile-example">
+      <fit-status-badge label="Available" tone="success" />
+      <h3>Chest press machine with a deliberately long equipment name</h3>
+      <p>Compact content wraps naturally while the primary control remains reachable and clearly labelled.</p>
+      <fit-button>Start workout</fit-button>
+    </div>
+  </fit-section-card>
+</section>

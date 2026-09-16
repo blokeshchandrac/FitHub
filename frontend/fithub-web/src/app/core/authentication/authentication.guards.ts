@@ -14,6 +14,28 @@ export const authenticationGuard: CanActivateFn = (_route, state) => {
   );
 };
 
+/**
+ * Restores the HttpOnly refresh-cookie session before evaluating the Administrator role.
+ * This is essential for protected links opened in a new tab because access tokens remain in memory
+ * and therefore are not copied into the new JavaScript context.
+ */
+export const administratorGuard: CanActivateFn = (_route, state) => {
+  const authentication = inject(AuthenticationService);
+  const router = inject(Router);
+
+  return authentication.restoreSession().pipe(
+    map((authenticated) => {
+      if (!authenticated) {
+        return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
+      }
+
+      return authentication.hasRole('Administrator')
+        ? true
+        : router.createUrlTree(['/unauthorized']);
+    }),
+  );
+};
+
 export function roleGuard(role: string): CanActivateFn {
   return () => {
     const authentication = inject(AuthenticationService);

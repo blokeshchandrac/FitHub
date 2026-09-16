@@ -1,0 +1,77 @@
+<section class="capabilities" aria-labelledby="capabilities-title">
+  <div class="capabilities-heading" appLandingReveal>
+    <p class="section-label">ONE CONNECTED EXPERIENCE</p>
+    <h2 id="capabilities-title">MORE THAN A MEMBERSHIP</h2>
+  </div>
+
+  <div class="feature-grid">
+    <article class="feature feature-wide" appLandingReveal>
+      <span aria-hidden="true">01</span>
+      <h3>Membership management</h3>
+      <p>Choose a plan, follow your current status and keep confirmed payments together.</p>
+    </article>
+    <article class="feature" appLandingReveal [revealDelay]="70">
+      <span aria-hidden="true">02</span>
+      <h3>Quick gym check-in</h3>
+      <p>Reach the gym and record your visit with less friction.</p>
+    </article>
+    <article class="feature" appLandingReveal [revealDelay]="140">
+      <span aria-hidden="true">03</span>
+      <h3>Workout logging</h3>
+      <p>Record exercises, sets, repetitions, weight and rest time as you train.</p>
+    </article>
+    <article class="feature feature-tall" appLandingReveal>
+      <span aria-hidden="true">04</span>
+      <h3>Progress history</h3>
+      <p>See completed workouts, attendance, body measurements and personal records in context.</p>
+    </article>
+    <article class="feature" appLandingReveal [revealDelay]="70">
+      <span aria-hidden="true">05</span>
+      <h3>Training guidance</h3>
+      <p>Receive clear suggestions based on your own goal, schedule and recent activity.</p>
+    </article>
+    <article class="feature feature-accent" appLandingReveal [revealDelay]="140">
+      <span aria-hidden="true">06</span>
+      <h3>Classes and availability</h3>
+      <p>Book approved classes and check what is available before your next visit.</p>
+    </article>
+    <article class="feature feature-wide" appLandingReveal>
+      <span aria-hidden="true">07</span>
+      <h3>Equipment support</h3>
+      <p>Find current equipment status and report a problem directly from FitHub.</p>
+    </article>
+  </div>
+</section>
+
+<section class="final-cta" aria-labelledby="cta-title">
+  <div appLandingReveal>
+    <h2 id="cta-title">READY TO MAKE EVERY VISIT COUNT?</h2>
+    <p>
+      Create your FitHub account, choose your membership and begin building a training routine that
+      is easier to follow.
+    </p>
+    <div class="cta-actions">
+      <a class="join" routerLink="/register">JOIN FITHUB</a>
+      <a class="sign-in" routerLink="/login"
+        >Already a member? Sign in <span aria-hidden="true">→</span></a
+      >
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <span class="brand-mark" aria-hidden="true">FH</span>
+      <div>
+        <strong>FitHub</strong>
+        <p>A connected place to manage your membership, training and progress.</p>
+      </div>
+    </div>
+    <nav aria-label="Footer navigation">
+      <a routerLink="/register">Join FitHub</a>
+      <a routerLink="/login">Sign In</a>
+    </nav>
+  </div>
+  <p class="copyright">© {{ year }} FitHub. Academic software engineering project.</p>
+</footer>

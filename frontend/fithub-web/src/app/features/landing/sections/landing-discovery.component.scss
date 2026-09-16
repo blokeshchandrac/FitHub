@@ -1,0 +1,248 @@
+:host {
+  display: block;
+}
+#why-fithub,
+#your-goals {
+  // Keep anchored headings clear of the sticky public header.
+  scroll-margin-top: 6rem;
+}
+.benefits {
+  background: #111512;
+  border-bottom: 1px solid rgb(255 255 255 / 9%);
+  border-top: 1px solid rgb(255 255 255 / 9%);
+  color: #f5f8f3;
+  padding: 2.2rem 2rem;
+}
+.benefit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 0 auto;
+  max-width: 76rem;
+}
+.benefit-grid article {
+  align-items: flex-start;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: auto 1fr;
+  padding: 0.5rem 2rem;
+}
+.benefit-grid article + article {
+  border-left: 1px solid rgb(255 255 255 / 13%);
+}
+.benefit-grid app-landing-icon {
+  color: var(--landing-accent);
+  margin-top: 0.1rem;
+}
+h3 {
+  font-size: 0.77rem;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  margin: 0;
+}
+.benefit-grid p {
+  color: #aeb7ae;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  margin: 0.45rem 0 0;
+  max-width: 18rem;
+}
+.goals {
+  background: var(--landing-paper);
+  color: #111411;
+  padding: clamp(5rem, 9vw, 8rem) 2rem;
+}
+.section-heading {
+  margin: 0 auto 3.2rem;
+  max-width: 76rem;
+}
+.section-label {
+  color: #397500;
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.18em;
+  margin: 0 0 0.9rem;
+}
+h2 {
+  font-size: clamp(2.35rem, 5.4vw, 5rem);
+  font-weight: 920;
+  letter-spacing: -0.065em;
+  line-height: 0.9;
+  margin: 0;
+  max-width: 12ch;
+}
+.section-heading > p:last-child {
+  color: #526056;
+  font-size: clamp(1rem, 1.5vw, 1.15rem);
+  line-height: 1.65;
+  margin: 1.35rem 0 0;
+  max-width: 44rem;
+}
+.goal-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(4, 1fr);
+  margin: 0 auto;
+  max-width: 76rem;
+}
+.goal-card {
+  background: #e4e7df;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+.goal-art {
+  align-items: center;
+  background: linear-gradient(145deg, #1a201b, #090b0a);
+  color: var(--landing-accent);
+  display: flex;
+  flex: 0 0 auto;
+  aspect-ratio: 1 / 1;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+.goal-art::before {
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  content: '';
+  height: 9rem;
+  left: 50%;
+  opacity: 0.28;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 9rem;
+}
+.goal-art::after {
+  background: linear-gradient(135deg, transparent 46%, rgb(201 255 74 / 15%) 47%, transparent 49%);
+  content: '';
+  inset: 0;
+  position: absolute;
+}
+.goal-art > span {
+  color: rgb(255 255 255 / 20%);
+  font-size: 4rem;
+  font-weight: 950;
+  left: 1rem;
+  letter-spacing: -0.08em;
+  position: absolute;
+  top: 0.6rem;
+}
+.goal-art app-landing-icon {
+  height: 4.25rem;
+  position: relative;
+  width: 4.25rem;
+  z-index: 1;
+}
+.goal-card__body {
+  display: flex;
+  flex: 0 0 11rem;
+  flex-direction: column;
+  padding: 1.4rem 1.25rem 1.55rem;
+}
+.goal-card h3 {
+  font-size: 0.82rem;
+}
+.goal-card p {
+  color: #566057;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0.7rem 0 0;
+}
+.goal-card.weight .goal-art {
+  background: linear-gradient(145deg, #25302a, #0b110d);
+}
+.goal-card.endurance .goal-art {
+  background: linear-gradient(145deg, #122728, #071010);
+}
+.goal-card.active .goal-art {
+  background: linear-gradient(145deg, #2b2e24, #10110d);
+}
+.journey-link {
+  align-items: center;
+  border-bottom: 2px solid #111411;
+  color: #111411;
+  display: flex;
+  font-size: 0.76rem;
+  font-weight: 950;
+  gap: 1.4rem;
+  letter-spacing: 0.09em;
+  margin: 2.7rem auto 0;
+  padding: 0.7rem 0;
+  text-decoration: none;
+  width: max-content;
+}
+.journey-link span {
+  transition: transform var(--motion-normal) var(--ease-standard);
+}
+.journey-link:hover span {
+  transform: translateX(0.3rem);
+}
+@media (max-width: 940px) {
+  .benefit-grid article {
+    padding-inline: 1.2rem;
+  }
+  .goal-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 680px) {
+  .benefits,
+  .goals {
+    padding-inline: 1.1rem;
+  }
+  .benefit-grid {
+    grid-template-columns: 1fr;
+  }
+  .benefit-grid article {
+    padding: 1.25rem 0.3rem;
+  }
+  .benefit-grid article + article {
+    border-left: 0;
+    border-top: 1px solid rgb(255 255 255 / 13%);
+  }
+  .goal-grid {
+    grid-template-columns: 1fr;
+  }
+  .goal-card {
+    display: grid;
+    grid-template-columns: minmax(8rem, 36%) 1fr;
+    height: 12rem;
+  }
+  .goal-art {
+    aspect-ratio: auto;
+  }
+  .goal-card__body {
+    align-self: stretch;
+    flex-basis: auto;
+  }
+  .goal-art > span {
+    font-size: 2.5rem;
+  }
+  .goal-art app-landing-icon {
+    height: 3.2rem;
+    width: 3.2rem;
+  }
+  .goals {
+    padding-block: 4.5rem;
+  }
+  .section-heading {
+    margin-bottom: 2.2rem;
+  }
+}
+@media (max-width: 420px) {
+  .goal-card {
+    grid-template-columns: 1fr;
+    grid-template-rows: 9rem auto;
+    height: 21rem;
+  }
+  .journey-link {
+    max-width: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .journey-link span {
+    transition: none;
+  }
+}

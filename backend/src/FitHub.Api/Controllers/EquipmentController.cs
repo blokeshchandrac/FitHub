@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace FitHub.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Roles = AuthorizationPolicies.Member + "," + AuthorizationPolicies.Administrator)]
 [Route("api/equipment")]
 public sealed class EquipmentController(IEquipmentService equipmentService, IEquipmentAccessService accessService) : ControllerBase
 {
@@ -15,7 +15,7 @@ public sealed class EquipmentController(IEquipmentService equipmentService, IEqu
     public async Task<IReadOnlyCollection<EquipmentSummaryDto>> List(CancellationToken cancellationToken)
     {
         var live = User.IsInRole(AuthorizationPolicies.Trainer) || User.IsInRole(AuthorizationPolicies.Administrator) || await accessService.IsCheckedInAsync(User.GetRequiredUserId(), cancellationToken);
-        return await equipmentService.ListAsync(live, cancellationToken);
+        return await equipmentService.ListAsync(live, User.IsInRole(AuthorizationPolicies.Administrator), cancellationToken);
     }
 
     [HttpGet("{equipmentId:guid}")]
@@ -29,18 +29,22 @@ public sealed class EquipmentController(IEquipmentService equipmentService, IEqu
 
     [HttpPost("{equipmentId:guid}/claim")]
     [Authorize(Policy = AuthorizationPolicies.ActiveMembership)]
+    [Authorize(Policy = AuthorizationPolicies.Member)]
     public async Task<ActionResult<EquipmentDetailDto>> Claim(Guid equipmentId, CancellationToken cancellationToken) => await CheckedInChange(() => equipmentService.ClaimAsync(equipmentId, User.GetRequiredUserId(), cancellationToken), cancellationToken);
 
     [HttpPost("{equipmentId:guid}/sharing-allowed")]
     [Authorize(Policy = AuthorizationPolicies.ActiveMembership)]
+    [Authorize(Policy = AuthorizationPolicies.Member)]
     public async Task<ActionResult<EquipmentDetailDto>> Sharing(Guid equipmentId, CancellationToken cancellationToken) => await CheckedInChange(() => equipmentService.AllowSharingAsync(equipmentId, User.GetRequiredUserId(), cancellationToken), cancellationToken);
 
     [HttpPost("{equipmentId:guid}/occupied")]
     [Authorize(Policy = AuthorizationPolicies.ActiveMembership)]
+    [Authorize(Policy = AuthorizationPolicies.Member)]
     public async Task<ActionResult<EquipmentDetailDto>> Occupied(Guid equipmentId, CancellationToken cancellationToken) => await CheckedInChange(() => equipmentService.ReturnOccupiedAsync(equipmentId, User.GetRequiredUserId(), cancellationToken), cancellationToken);
 
     [HttpPost("{equipmentId:guid}/release")]
     [Authorize(Policy = AuthorizationPolicies.ActiveMembership)]
+    [Authorize(Policy = AuthorizationPolicies.Member)]
     public async Task<ActionResult<EquipmentDetailDto>> Release(Guid equipmentId, ReleaseEquipmentRequest request, CancellationToken cancellationToken) => await CheckedInChange(() => equipmentService.ReleaseAsync(equipmentId, User.GetRequiredUserId(), request.ClearanceConfirmed, cancellationToken), cancellationToken);
 
     [HttpPost("{equipmentId:guid}/override")]

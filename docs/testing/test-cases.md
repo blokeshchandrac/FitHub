@@ -35,6 +35,13 @@
 | PRK-03 | Parking simulator | Synthetic click mapping/confidence preserved | simulator tests |
 | REC-01 | Every recommendation rule | Result, reason, estimates, disclaimer verified | `RecommendationRulesTests` |
 | ADM-01 | Booking capacity/duplicates/waitlist | Capacity safe; cancellation promotes | booking unit/integration tests |
+| ADM-02 | Trainer creates class | Status is PendingApproval and Members cannot see it | `AuthenticationApiTests`, `ClassBookingTests` |
+| ADM-03 | Administrator reviews class | Approved future class becomes Member-visible; rejection needs a reason | `AuthenticationApiTests`, `ClassBookingTests` |
+| ADM-04 | Trainer account creation | Only Administrator can create a Trainer login | `AuthenticationApiTests` |
+| ADM-05 | Block user/card | Existing user token is rejected; card validation returns an explicit denial | `AuthenticationApiTests`, `RoleWorkflowDomainTests` |
+| ADM-06 | Role navigation/API boundary | Admin/Trainer personal Member endpoints forbidden; role navigation excludes unrelated pages | `AuthenticationApiTests`, `ApiSecurityMetadataTests`, `app.spec.ts` |
+| ADM-07 | Confirmed net revenue | Pending/cancelled/failed/demo excluded and refunds deducted | `Stage8AdministrationModulesTests` |
+| PROFILE-01 | First Member login | Incomplete profile enters Welcome; valid profile completes onboarding | `AuthenticationApiTests`, `login-page.spec.ts` |
 | ADM-02 | Revenue/CSV | Only succeeded payments counted | Stage 8 integration tests |
 | ADM-03 | Six notification types | Generation and deduplication verified | notification tests |
 | UI-01 | Unauthenticated protected route | Redirects to login with return URL | Angular guard spec |

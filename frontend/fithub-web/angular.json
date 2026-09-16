@@ -38,6 +38,12 @@
           },
           "configurations": {
             "production": {
+              "fileReplacements": [
+                {
+                  "replace": "src/app/core/routing/development.routes.ts",
+                  "with": "src/app/core/routing/development.routes.production.ts"
+                }
+              ],
               "optimization": {
                 "scripts": true,
                 "styles": {
@@ -70,6 +76,9 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": {
+            "port": 4040
+          },
           "configurations": {
             "production": {
               "buildTarget": "fithub-web:build:production"

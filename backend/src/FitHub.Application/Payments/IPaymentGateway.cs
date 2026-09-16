@@ -26,7 +26,12 @@ public sealed record PaymentWebhookNotification(
     Guid? UserId,
     Guid? PlanId,
     MembershipPurchaseKind? PurchaseKind,
-    PaymentWebhookOutcome Outcome);
+    PaymentWebhookOutcome Outcome,
+    string? StripePaymentIntentId = null,
+    long? RefundedAmountMinor = null,
+    string? Currency = null,
+    long? AmountTotalMinor = null,
+    bool IsLiveMode = false);
 
 public enum PaymentWebhookOutcome
 {
@@ -34,6 +39,7 @@ public enum PaymentWebhookOutcome
     Succeeded,
     Failed,
     Cancelled,
+    Refunded,
     Ignored
 }
 

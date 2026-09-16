@@ -43,11 +43,39 @@ public sealed class ApiSecurityMetadataTests
 
     [Theory]
     [InlineData(typeof(AdministratorDashboardController))]
+    [InlineData(typeof(AdministrationManagementController))]
+    [InlineData(typeof(ClassAdministrationController))]
     [InlineData(typeof(FaultReportsAdministrationController))]
     [InlineData(typeof(MembershipPlansAdministrationController))]
     public void AdministrationControllersRequireAdministratorPolicy(Type controllerType)
     {
         var authorize = Assert.Single(controllerType.GetCustomAttributes<AuthorizeAttribute>());
+        Assert.Equal(AuthorizationPolicies.Administrator, authorize.Policy);
+    }
+
+    [Theory]
+    [InlineData(typeof(TrainerClassesController))]
+    [InlineData(typeof(TrainerWorkoutAssignmentsController))]
+    public void TrainerControllersRequireTrainerPolicy(Type controllerType)
+    {
+        var authorize = Assert.Single(controllerType.GetCustomAttributes<AuthorizeAttribute>());
+        Assert.Equal(AuthorizationPolicies.Trainer, authorize.Policy);
+    }
+
+    [Fact]
+    public void PersonalClassBookingControllerRequiresMemberAndActiveMembershipPolicies()
+    {
+        var policies = typeof(ClassBookingsController).GetCustomAttributes<AuthorizeAttribute>()
+            .Select(attribute => attribute.Policy)
+            .ToHashSet(StringComparer.Ordinal);
+        Assert.Contains(AuthorizationPolicies.Member, policies);
+        Assert.Contains(AuthorizationPolicies.ActiveMembership, policies);
+    }
+
+    [Fact]
+    public void ParkingSimulationControllerRequiresAdministratorPolicy()
+    {
+        var authorize = Assert.Single(typeof(ParkingSimulationController).GetCustomAttributes<AuthorizeAttribute>());
         Assert.Equal(AuthorizationPolicies.Administrator, authorize.Policy);
     }
 }

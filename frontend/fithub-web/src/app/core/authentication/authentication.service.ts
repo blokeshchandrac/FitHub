@@ -2,10 +2,12 @@ import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { catchError, finalize, map, Observable, of, shareReplay, tap } from 'rxjs';
 import { AuthenticationResponse, CurrentUser, LoginRequest, RegistrationRequest } from './authentication.models';
+import { ThemeService } from '../theme/theme.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthenticationService {
   private readonly http = inject(HttpClient);
+  private readonly themes = inject(ThemeService);
   private readonly accessTokenState = signal<string | null>(null);
   private readonly currentUserState = signal<CurrentUser | null>(null);
   private restoreRequest: Observable<boolean> | null = null;
@@ -28,6 +30,10 @@ export class AuthenticationService {
     );
   }
 
+  /**
+   * Rehydrates the in-memory access token from the server-managed refresh cookie.
+   * The shared observable prevents route guards in the same navigation from issuing duplicate refreshes.
+   */
   restoreSession(): Observable<boolean> {
     if (this.isAuthenticated()) {
       return of(true);
@@ -59,11 +65,21 @@ export class AuthenticationService {
     return this.http.post<{ message: string }>('/api/auth/forgot-password', { email });
   }
 
+  refreshCurrentUser(): Observable<CurrentUser> {
+    return this.http.get<CurrentUser>('/api/auth/me').pipe(
+      tap((user) => {
+        this.themes.setAuthenticatedUser(user.id);
+        this.currentUserState.set(user);
+      }),
+    );
+  }
+
   hasRole(role: string): boolean {
     return this.currentUserState()?.roles.includes(role) ?? false;
   }
 
   private establishSession(response: AuthenticationResponse): void {
+    this.themes.setAuthenticatedUser(response.user.id);
     this.accessTokenState.set(response.accessToken);
     this.currentUserState.set(response.user);
   }
@@ -71,5 +87,6 @@ export class AuthenticationService {
   private clearSession(): void {
     this.accessTokenState.set(null);
     this.currentUserState.set(null);
+    this.themes.useGuestPreference();
   }
 }

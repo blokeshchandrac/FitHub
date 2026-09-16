@@ -38,6 +38,12 @@ export interface MembershipOverview {
   payments: Payment[];
 }
 
+export interface PaymentReconciliationResult {
+  confirmed: boolean;
+  changed: boolean;
+  message: string;
+}
+
 export interface MembershipPlanCommand {
   name: string;
   description: string;

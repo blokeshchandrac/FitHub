@@ -1,13 +1,16 @@
+@use './styles/tokens';
+@use './styles/reset';
+
 :root {
-  color: #18233a;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--color-text-primary);
+  font-family: var(--font-family-body);
   font-synthesis: none;
 }
 
 * { box-sizing: border-box; }
-body { background: #f4f7fb; margin: 0; }
+body { background: var(--color-page); margin: 0; }
 button, input, select, textarea { font: inherit; }
-:focus-visible { outline: 3px solid #0f766e; outline-offset: 3px; }
+:focus-visible { outline: 0.1875rem solid var(--color-focus-ring); outline-offset: 0.1875rem; }
 .feature-page { margin: 0 auto; max-width: 76rem; }
 .feature-page h1 { font-size: clamp(1.75rem, 4vw, 2.5rem); margin: 0 0 0.5rem; }
 .feature-page p { color: #64748b; font-size: 1.05rem; margin: 0; }
@@ -72,11 +75,6 @@ button, input, select, textarea { font: inherit; }
 .button-link { display: inline-block; text-align: center; text-decoration: none; }
 .auth-links { display: flex; font-size: 0.9rem; justify-content: space-between; margin-top: 0.5rem; }
 .auth-links a { color: #047857; }
-.demo-accounts { border-top: 1px solid #e2e8f0; display:grid; gap:.5rem; margin-top:.75rem; padding-top:1rem; }
-.demo-accounts>strong { font-size:.85rem; }
-.demo-accounts button { background:#f8fafc; border:1px solid #cbd5e1; border-radius:.55rem; cursor:pointer; display:grid; gap:.15rem; padding:.65rem; text-align:left; }
-.demo-accounts button:hover { border-color:#10b981; }
-.demo-accounts small,.demo-accounts p { color:#64748b; font-size:.75rem; margin:0; }
 
 @media (max-width: 600px) {
   .form-grid { grid-template-columns: 1fr; }
@@ -108,6 +106,13 @@ th { color: #475569; font-size: .8rem; text-transform: uppercase; }
 .qr-token img { border-radius: .5rem; justify-self: center; max-width: 100%; }
 .form-stack { display: grid; gap: .7rem; }
 .form-stack label { font-weight: 700; }
+.form-stack fieldset { border: 1px solid var(--color-border, #cbd5e1); border-radius: var(--radius-md, .55rem); margin: 0; padding: var(--space-3, .75rem); }
+.form-stack legend { font-weight: 700; padding: 0 var(--space-2, .5rem); }
+.choice-grid { display: grid; gap: var(--space-2, .5rem); grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); }
+.choice-grid label { align-items: center; display: flex; gap: var(--space-2, .5rem); min-height: 2.75rem; }
+.choice-grid input[type='checkbox'] { inline-size: 1.15rem; width: auto; }
+.inline-actions { align-items: center; display: flex; flex-wrap: wrap; gap: var(--space-2, .5rem); }
+.inline-actions input { flex: 1 1 12rem; }
 .form-stack input, .form-stack textarea { border: 1px solid #cbd5e1; border-radius: .55rem; padding: .75rem; width: 100%; }
 .two-column { align-items: start; display: grid; gap: 1.25rem; grid-template-columns: minmax(16rem, 22rem) 1fr; }
 .plan-list { display: grid; gap: 1rem; }
@@ -155,4 +160,161 @@ th { color: #475569; font-size: .8rem; text-transform: uppercase; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+}
+
+// Checkpoint 1A compatibility layer: existing feature markup receives the
+// semantic palette without changing page structure or business behavior.
+body { background: var(--color-page); color: var(--color-text-primary); }
+.feature-page p,
+.auth-intro,
+.metric-grid span,
+.muted,
+.select-card small,
+.chart-scale,
+.metric-card span,
+.metric-card small,
+.record-list small,
+.equipment-card small,
+.machine-state,
+.parking-space small,
+.class-card small { color: var(--color-text-secondary); }
+
+.foundation-card,
+.auth-card,
+.secondary-button,
+.equipment-card,
+.large-status {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-card);
+}
+
+.foundation-card,
+.auth-card,
+.equipment-card,
+.metric-card { border-radius: var(--radius-card); }
+
+.auth-card input,
+.form-stack input,
+.form-stack textarea,
+.form-stack select,
+.filter-row input,
+.filter-row select,
+.parking-correction input,
+.parking-correction select,
+.select-card {
+  background: var(--color-surface-interactive);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.primary-button {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  transition: background var(--motion-fast) var(--ease-standard), transform var(--motion-fast) var(--ease-standard);
+}
+.primary-button:not(:disabled):hover { background: var(--color-accent-hover); }
+.primary-button:disabled { color: var(--color-on-accent); opacity: .52; }
+.secondary-button { transition: background var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard); }
+.secondary-button:hover { background: var(--color-surface-interactive); border-color: var(--color-border-strong); }
+.eyebrow,
+.plan-price,
+.link-button,
+.auth-links a,
+.metric-card strong { color: var(--color-accent); }
+.metric-card { background: var(--color-surface); border-color: var(--color-border); }
+.previous-performance { background: var(--color-surface-interactive); color: var(--color-text-secondary); }
+.chart line { stroke: var(--color-border-strong); }
+.chart polyline,
+.bar-chart div { stroke: var(--color-accent); background: var(--color-accent); }
+th,
+td,
+.record-list div,
+.report-row,
+.summary-row,
+.recommendation-card details { border-color: var(--color-border); }
+th { color: var(--color-text-secondary); }
+.api-error { background: var(--color-error-surface); color: var(--color-error); }
+.success-message { background: var(--color-success-surface); color: var(--color-success); }
+.status-badge { background: var(--color-success-surface); color: var(--color-success); }
+.status-badge.inactive { background: var(--color-offline-surface); color: var(--color-offline); }
+.nutrition-disclaimer { background: var(--color-warning-surface); border-color: var(--color-warning); }
+.nutrition-disclaimer p { color: var(--color-warning); }
+.pr-row { background: var(--color-warning-surface); }
+.pr-row span { background: var(--color-warning); color: var(--color-on-accent); }
+
+.onboarding-welcome { display:grid; gap:clamp(1.5rem,4vw,4rem); grid-template-columns:minmax(0,.8fr) minmax(18rem,1fr); margin:0 auto; max-width:68rem; }
+.onboarding-copy { align-self:center; }
+.onboarding-copy h1 { font-size:clamp(2rem,5vw,4rem); max-width:12ch; }
+.admin-management-grid { display:grid; gap:1.25rem; grid-template-columns:minmax(0,1fr) minmax(17rem,24rem); }
+.detail-panel { align-self:start; position:sticky; top:6rem; }
+.detail-panel hr { border:0; border-top:1px solid var(--color-border); margin:1.25rem 0; }
+.class-list-item { border-bottom:1px solid var(--color-border); display:grid; gap:.65rem; padding:1rem 0; }
+.class-list-item:last-child { border-bottom:0; }
+.validation-result { display:grid; gap:.5rem; }
+@media(max-width:800px){.onboarding-welcome,.admin-management-grid{grid-template-columns:1fr}.detail-panel{position:static}.table-wrap{overflow-x:auto}.table-wrap table{min-width:42rem}}
+.parking-space.misusedorblocked{background:#fff7ed;border-color:#f97316}
+.parking-lab .dialog-backdrop{align-items:center;background:#000c;display:flex;inset:0;justify-content:center;padding:1rem;position:fixed;z-index:50}.parking-lab .dialog{background:#111713;border:1px solid #566158;border-radius:1rem;color:#f5f7f2;max-height:90dvh;max-width:38rem;overflow:auto;padding:clamp(1.1rem,4vw,2rem);width:100%}.parking-lab .dialog.compact{max-width:28rem}.parking-lab .dialog h2{margin-top:0}.parking-lab .dialog li,.parking-lab .dialog p{color:#b7c0b9;font-size:.8rem;line-height:1.55}.parking-lab .dialog li{margin:.45rem 0}.parking-lab .dialog .button-row{justify-content:flex-end}
+
+.parking-lab .event-log-heading {
+  align-items: end;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+.parking-lab .event-log-heading h2 { margin-bottom: .15rem; }
+.parking-lab .event-log-heading span { color: #9fa9a1; font-size: .62rem; }
+.parking-lab .event-log-actions { display: flex; flex-wrap: wrap; gap: .45rem; }
+.parking-lab .event-log-actions button {
+  background: #1d251f;
+  border: 1px solid #465148;
+  border-radius: .42rem;
+  color: #edf3ee;
+  cursor: pointer;
+  font-size: .66rem;
+  font-weight: 750;
+  min-height: 2.35rem;
+  padding: .45rem .75rem;
+}
+.parking-lab .event-log-actions button.accent { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-on-accent); }
+.parking-lab .event-log-actions button:disabled { cursor: not-allowed; opacity: .42; }
+.parking-lab .event-table-wrap {
+  border: 1px solid #303a32;
+  border-radius: .55rem;
+  margin-top: .7rem;
+  max-height: 19rem;
+  overflow: auto;
+}
+.parking-lab .event-table { border-collapse: separate; border-spacing: 0; min-width: 52rem; width: 100%; }
+.parking-lab .event-table th {
+  background: #0b100d;
+  color: #aeb8b0;
+  font-size: .58rem;
+  letter-spacing: .06em;
+  padding: .6rem;
+  position: sticky;
+  text-align: left;
+  text-transform: uppercase;
+  top: 0;
+  z-index: 1;
+}
+.parking-lab .event-table td {
+  background: #0b0f0c;
+  border-top: 1px solid #283029;
+  color: #bac4bc;
+  font-size: .62rem;
+  line-height: 1.4;
+  padding: .6rem;
+  vertical-align: top;
+}
+.parking-lab .event-table td:first-child { box-shadow: inset 3px 0 #35d7f4; color: #929d95; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.parking-lab .event-table tr[data-tone='success'] td:first-child { box-shadow: inset 3px 0 #4ade80; }
+.parking-lab .event-table tr[data-tone='warning'] td:first-child { box-shadow: inset 3px 0 #fb923c; }
+.parking-lab .event-table tr[data-tone='error'] td:first-child { box-shadow: inset 3px 0 #fb7185; }
+.parking-lab .event-result { border: 1px solid #465148; border-radius: 999px; display: inline-block; font-size: .55rem; font-weight: 800; padding: .2rem .4rem; white-space: nowrap; }
+.parking-lab .event-log-empty { color: #929d95 !important; padding: 1.25rem !important; text-align: center; }
+@media(max-width:700px){
+  .parking-lab .event-log-heading { align-items: stretch; flex-direction: column; }
+  .parking-lab .event-log-actions button { flex: 1; }
 }

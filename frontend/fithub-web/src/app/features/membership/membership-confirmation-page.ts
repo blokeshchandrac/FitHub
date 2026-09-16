@@ -1,8 +1,9 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router, RouterLink } from '@angular/router';
-import { catchError, EMPTY, switchMap, take, tap, timer } from 'rxjs';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { catchError, EMPTY, finalize, of, switchMap, take, tap, timer } from 'rxjs';
 import { AccountContextService } from '../../core/membership/account-context.service';
+import { MembershipService } from '../../core/membership/membership.service';
 
 @Component({
   selector: 'app-membership-confirmation-page',
@@ -10,8 +11,8 @@ import { AccountContextService } from '../../core/membership/account-context.ser
   template: `
     <section class="confirmation-card">
       <div class="confirmation-mark" aria-hidden="true">✓</div>
-      <p class="eyebrow">Payment confirmation</p><h1>{{ confirmed() ? 'Payment confirmed' : 'Confirming your payment' }}</h1>
-      <p>{{ confirmed() ? 'Your membership is active. FitHub member features are now available.' : 'Stripe has returned you to FitHub. Access becomes available only after the verified payment webhook confirms your membership.' }}</p>
+      <p class="eyebrow">Payment confirmation</p><h1>{{ confirmed() ? 'Payment successful!' : 'Confirming your payment…' }}</h1>
+      <p>{{ confirmed() ? 'Your FitHub membership is now active.' : 'Stripe has returned you to FitHub. Access becomes available only after verified Stripe payment evidence confirms your membership.' }}</p>
       @if (checking()) { <p class="checking" aria-live="polite">Checking membership status…</p> }
       @if (message()) { <div class="api-error" role="alert">{{ message() }}</div> }
       <div class="button-row"><button class="primary-button" type="button" [disabled]="checking()" (click)="checkAgain()">Check again</button><a class="secondary-button" routerLink="/membership/choose">Return to plans</a></div>
@@ -21,24 +22,46 @@ import { AccountContextService } from '../../core/membership/account-context.ser
 })
 export class MembershipConfirmationPage {
   private readonly context = inject(AccountContextService);
+  private readonly membershipService = inject(MembershipService);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly checkoutSessionId = this.route.snapshot.queryParamMap.get('session_id');
   protected readonly checking = signal(true);
   protected readonly message = signal<string | null>(null);
   protected readonly confirmed = signal(false);
 
-  constructor() { this.poll(); }
+  constructor() { this.confirmAndPoll(); }
 
-  protected checkAgain(): void { this.poll(1); }
+  protected checkAgain(): void { this.confirmAndPoll(1); }
+
+  private confirmAndPoll(attempts = 15): void {
+    this.checking.set(true);
+    this.message.set(null);
+    const confirmation = this.membershipService.reconcileCheckout(this.checkoutSessionId ?? undefined).pipe(
+      catchError(() => {
+        this.message.set('We could not confirm the payment yet. Please try again shortly.');
+        return of(null);
+      }),
+    );
+
+    confirmation.pipe(
+      take(1),
+      finalize(() => {
+        if (!this.destroyRef.destroyed) this.poll(attempts);
+      }),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe();
+  }
 
   private poll(attempts = 15): void {
-    this.checking.set(true); this.message.set(null);
     timer(0, 2000).pipe(
       take(attempts), switchMap(() => this.context.refresh()),
       tap(() => {
         if (this.context.hasActiveMembership() && !this.confirmed()) {
           this.confirmed.set(true);
           this.checking.set(false);
+          this.message.set(null);
           setTimeout(() => this.router.navigateByUrl('/dashboard'), 1200);
         }
       }),

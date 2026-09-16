@@ -1,5 +1,11 @@
 # FitHub Stage 9 test results
 
+## Role and workflow stabilization — 1 September 2026
+
+The role/workflow correction verified **210 automated tests** with no failures: 91 backend unit, 71 PostgreSQL integration/API, 44 Angular, 2 equipment-simulator, and 2 parking-simulator tests. After the final class-audit and capacity safeguard, the affected Stage 8 integration group was rerun separately (3/3 passed). Backend and Angular Release/production builds, Docker image builds, Compose validation, PostgreSQL readiness, API health, frontend HTTP 200, role-route HTTP checks, and the tracked-file credential scan passed.
+
+Live checks confirmed that Administrator management/class/equipment/parking routes succeed while personal Member routes return 403; Trainer class routes succeed while Administrator, membership, equipment, parking, and personal Member routes return 403; and an active Member reaches the dashboard but cannot reach staff routes.
+
 ## Final result
 
 Verified on 13 August 2026: **134 automated tests passed, 0 failed, 0 skipped**. Both production builds and the isolated Docker startup smoke test passed.

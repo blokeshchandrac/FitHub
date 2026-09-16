@@ -1,0 +1,97 @@
+<div class="parking-lab">
+  <header class="parking-topbar">
+    <a class="parking-brand" routerLink="/simulation" aria-label="Return to simulation selection"><span>FH</span><strong>FitHub</strong></a>
+    <div class="parking-title"><p>Smart Parking</p><h1>Virtual Camera Lab</h1></div>
+    <nav aria-label="Simulation navigation">
+      <span class="mode" [class.connected]="engine.mode() === 'connected'"><i aria-hidden="true"></i>{{ engine.mode() === 'connected' ? 'Connected Mode' : 'Local Mode' }}</span>
+      <button type="button" (click)="toggleMode()" [disabled]="modeChanging()">{{ modeChanging() ? 'Connecting…' : engine.mode() === 'connected' ? 'Use Local Mode' : 'Try Connected Mode' }}</button>
+      <span class="connection-feedback" aria-live="polite">{{ api.connectionMessage() }}</span>
+      <a routerLink="/simulation">All simulations</a>
+      <a routerLink="/login">FitHub application</a>
+    </nav>
+  </header>
+
+  <main class="parking-content">
+    <section class="scene-section" aria-labelledby="parking-scene-title">
+      <div class="scene-heading">
+        <div><p class="kicker">Playable three-dimensional environment</p><h2 id="parking-scene-title">Drive, park and scan twelve monitored spaces</h2></div>
+        <button type="button" class="help-button" (click)="instructionsOpen.set(true)">Help / Instructions</button>
+      </div>
+      <div #sceneHost class="parking-scene" (click)="onSceneClick($event)">
+        @if (!webGlAvailable()) { <div class="webgl-error"><h3>3D parking is unavailable</h3><p>Enable WebGL or use a supported browser.</p></div> }
+        @if (engine.scanning()) { <div class="scan-message" role="status">Camera capture in progress…</div> }
+        @if (activeAlert(); as alert) { <div class="alert-message" role="alert"><strong>Parking warning</strong><span>{{ alert.reason }}</span></div> }
+        <div class="scene-help" aria-hidden="true"><span>Click a car to drive</span><span>Drag to orbit</span><span>Scroll to zoom</span></div>
+      </div>
+
+      <section class="vehicle-panel panel" aria-labelledby="vehicle-controls-title">
+        <div class="panel-heading"><div><p class="kicker">Vehicle controls</p><h3 id="vehicle-controls-title">{{ engine.selectedCar()?.id ?? 'No car selected' }}</h3></div><span>{{ engine.cars().length }}/6 cars</span></div>
+        <div class="button-row">
+          <button type="button" class="accent" (click)="addCar()">Add Car</button>
+          <button type="button" (click)="engine.removeSelectedCar()" [disabled]="!engine.selectedCar()">Remove Selected Car</button>
+          <button type="button" (click)="resetCar()" [disabled]="!engine.selectedCar()">Reset Selected Car</button>
+          <button type="button" class="danger" (click)="resetPending.set(true)">Reset Parking Simulation</button>
+        </div>
+        <div class="controls-help"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>or arrows to drive</span><kbd>Space</kbd><span>brake</span><kbd>R</kbd><span>reset car</span><kbd>Shift</kbd><span>boost</span></div>
+        <label class="check-row"><input type="checkbox" [checked]="engine.followCamera()" (change)="engine.followCamera.set(!engine.followCamera())"> Smooth follow camera</label>
+        <div class="touch-controls" aria-label="Touch vehicle controls">
+          <button type="button" aria-label="Drive forward" (pointerdown)="pressTouch('KeyW',true)" (pointerup)="pressTouch('KeyW',false)" (pointercancel)="pressTouch('KeyW',false)">▲</button>
+          <button type="button" aria-label="Steer left" (pointerdown)="pressTouch('KeyA',true)" (pointerup)="pressTouch('KeyA',false)" (pointercancel)="pressTouch('KeyA',false)">◀</button>
+          <button type="button" aria-label="Brake" (pointerdown)="pressTouch('Space',true)" (pointerup)="pressTouch('Space',false)" (pointercancel)="pressTouch('Space',false)">■</button>
+          <button type="button" aria-label="Steer right" (pointerdown)="pressTouch('KeyD',true)" (pointerup)="pressTouch('KeyD',false)" (pointercancel)="pressTouch('KeyD',false)">▶</button>
+          <button type="button" aria-label="Reverse" (pointerdown)="pressTouch('KeyS',true)" (pointerup)="pressTouch('KeyS',false)" (pointercancel)="pressTouch('KeyS',false)">▼</button>
+        </div>
+      </section>
+    </section>
+
+    <aside class="inspector-column" aria-label="Parking simulation controls and results">
+      <section class="panel camera-panel">
+        <div class="panel-heading"><div><p class="kicker">{{ engine.cameraId }}</p><h2>Parking camera</h2></div><span class="camera-state" [class.offline]="!engine.cameraOnline()">{{ engine.cameraOnline() ? 'Online' : 'Offline' }}</span></div>
+        <div class="segmented" aria-label="Camera state"><button type="button" [class.active]="engine.cameraOnline()" (click)="setCameraOnline(true)">Camera Online</button><button type="button" [class.active]="!engine.cameraOnline()" (click)="setCameraOnline(false)">Camera Offline</button></div>
+        <label class="check-row"><input type="checkbox" [checked]="engine.lowConfidence()" (change)="setLowConfidence(!engine.lowConfidence())"> Low-confidence / obstructed view</label>
+        <label class="check-row"><input type="checkbox" [checked]="engine.demoSpeed()" (change)="setDemoSpeed(!engine.demoSpeed())"> Demo Speed — scan every 5 seconds</label>
+        <div class="scan-countdown"><span>Next scheduled scan</span><strong>{{ formatCountdown(engine.secondsUntilScan()) }}</strong></div>
+        <button type="button" class="accent scan-button" (click)="scanNow()" [disabled]="engine.scanning()">{{ engine.scanning() ? 'Scanning…' : 'Scan Now' }}</button>
+        <p class="latest-time">Latest scan: {{ engine.latestScanAt() ? (engine.latestScanAt() | date:'medium') : 'Not captured yet' }}</p>
+        <div class="capture"><span>Latest Camera Capture</span>@if (engine.latestCapture(); as preview) { <img [src]="preview" width="320" height="180" alt="Latest simulated parking camera capture"> } @else { <div><small>Run a scan to capture the camera view.</small></div> }</div>
+      </section>
+
+      <section class="panel summary-panel">
+        <p class="kicker">Latest observation</p><h2>Parking summary</h2>
+        <div class="summary-grid"><div><span>Total</span><strong>{{ engine.summary().total }}</strong></div><div class="available"><span>Available</span><strong>{{ engine.summary().available }}</strong></div><div class="occupied"><span>Occupied</span><strong>{{ engine.summary().occupied }}</strong></div><div class="blocked"><span>Blocked</span><strong>{{ engine.summary().blocked }}</strong></div><div class="unknown"><span>Unknown</span><strong>{{ engine.summary().unknown }}</strong></div><div><span>Cars detected</span><strong>{{ engine.summary().detectedCars }}</strong></div><div><span>Active alerts</span><strong>{{ engine.summary().activeAlerts }}</strong></div></div>
+      </section>
+
+      <section class="panel item-inspector">
+        <p class="kicker">Selected item</p>
+        @if (engine.selectedCar(); as car) { <h2>{{ car.id }}</h2><dl><div><dt>Position</dt><dd>X {{ formatPosition(car.position.x) }} · Z {{ formatPosition(car.position.z) }}</dd></div><div><dt>Heading</dt><dd>{{ formatPosition(car.heading * 180 / 3.14159) }}°</dd></div><div><dt>Speed</dt><dd>{{ formatPosition(car.speed) }} m/s</dd></div></dl> }
+        @else if (engine.selectedSpace(); as space) { <h2>{{ space.id }}</h2><dl><div><dt>Status</dt><dd><span class="status-dot" [attr.data-state]="space.state" aria-hidden="true"></span>{{ space.state.replaceAll('_',' ') }}</dd></div><div><dt>Confidence</dt><dd>{{ space.confidence * 100 }}%</dd></div><div><dt>Observed</dt><dd>{{ space.observedAt ? (space.observedAt | date:'mediumTime') : 'Not scanned' }}</dd></div></dl> }
+        @else { <h2>Nothing selected</h2><p>Click a car or parking space in the scene.</p> }
+      </section>
+    </aside>
+
+    <section class="panel event-panel" aria-labelledby="parking-events-title">
+      <div class="event-log-heading">
+        <div><p class="kicker">Auditable simulation output</p><h2 id="parking-events-title">Parking Simulation Event Log</h2><span>{{ engine.mode() === 'local' ? 'Stored in this browser session' : 'Development backend connected' }}</span></div>
+        <div class="event-log-actions">
+          <button type="button" (click)="clearLog()" [disabled]="engine.events().length === 0">Clear Log</button>
+          <button type="button" class="accent" (click)="downloadLog()" [disabled]="engine.events().length === 0">Download Log</button>
+        </div>
+      </div>
+      <div class="event-table-wrap" aria-live="polite">
+        <table class="event-table">
+          <thead><tr><th scope="col">Time</th><th scope="col">Event</th><th scope="col">Source</th><th scope="col">Details</th><th scope="col">Result</th></tr></thead>
+          <tbody>
+            @for (event of engine.events(); track event.id) {
+              <tr [attr.data-tone]="event.tone"><td><time [attr.datetime]="event.occurredAt">{{ event.occurredAt | date:'mediumTime' }}</time></td><td>{{ event.action.replaceAll('_',' ') }}</td><td>{{ event.source }}</td><td>{{ event.detail }}</td><td><span class="event-result">{{ event.result }}</span></td></tr>
+            } @empty {
+              <tr><td colspan="5" class="event-log-empty">The browser simulation log is empty. New actions will appear here.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  @if (instructionsOpen()) { <div class="dialog-backdrop"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="parking-help-title"><h2 id="parking-help-title">How to use Smart Parking</h2><ol><li>Add a car and click it to select it.</li><li>Use WASD or arrow keys to drive. Space brakes and R returns to the entrance.</li><li>Park inside one painted space, then use Scan Now.</li><li>Straddle the line between two spaces to create one deduplicated parking alert.</li><li>Use Camera Offline or Low Confidence to demonstrate safe UNKNOWN observations.</li></ol><p>Local Mode stays in this browser. Connected Mode requires an authenticated FitHub Administrator and persists only simulated parking observations.</p><button type="button" class="accent" (click)="instructionsOpen.set(false)">Start driving</button></section></div> }
+  @if (resetPending()) { <div class="dialog-backdrop"><section class="dialog compact" role="alertdialog" aria-modal="true" aria-labelledby="reset-title"><h2 id="reset-title">Reset parking simulation?</h2><p>All virtual cars, captures and local alerts in this browser session will be cleared.</p><div class="button-row"><button type="button" (click)="resetPending.set(false)">Keep simulation</button><button type="button" class="danger" (click)="confirmReset()">Reset simulation</button></div></section></div> }
+</div>

@@ -8,6 +8,7 @@ namespace FitHub.Api.Controllers;
 
 [ApiController]
 [Authorize(Policy = AuthorizationPolicies.ActiveMembership)]
+[Authorize(Policy = AuthorizationPolicies.Member)]
 [Route("api/dashboard")]
 public sealed class MemberDashboardController(IDashboardService dashboardService) : ControllerBase
 {

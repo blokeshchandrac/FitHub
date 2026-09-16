@@ -1,0 +1,19 @@
+:host {
+  display: block;
+}
+
+.login-page {
+  min-height: calc(100dvh - 4.5rem);
+  padding: clamp(1rem, 4vh, 2.5rem) 1rem;
+}
+
+.login-card {
+  gap: 0.75rem;
+  max-width: 26rem;
+}
+
+@media (max-height: 560px), (max-width: 480px) {
+  .login-page {
+    min-height: calc(100dvh - 3.75rem);
+  }
+}

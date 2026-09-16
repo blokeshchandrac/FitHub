@@ -1,0 +1,80 @@
+<section id="why-fithub" class="benefits" aria-labelledby="benefits-title">
+  <h2 id="benefits-title" class="visually-hidden">Why FitHub</h2>
+  <div class="benefit-grid">
+    <article appLandingReveal>
+      <app-landing-icon name="clock" />
+      <div>
+        <h3>LESS WAITING</h3>
+        <p>See current gym availability and plan your visit with less uncertainty.</p>
+      </div>
+    </article>
+    <article appLandingReveal [revealDelay]="90">
+      <app-landing-icon name="direction" />
+      <div>
+        <h3>MORE DIRECTION</h3>
+        <p>Record your training and receive guidance based on your goals and activity.</p>
+      </div>
+    </article>
+    <article appLandingReveal [revealDelay]="180">
+      <app-landing-icon name="unified" />
+      <div>
+        <h3>ONE SIMPLE EXPERIENCE</h3>
+        <p>Manage your membership, check-ins, workouts and classes from one place.</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section id="your-goals" class="goals" aria-labelledby="goals-title">
+  <div class="section-heading" appLandingReveal>
+    <p class="section-label">YOUR GOALS</p>
+    <h2 id="goals-title">FITNESS BUILT AROUND YOU</h2>
+    <p>
+      Choose what you want to improve and let FitHub organise your training experience around that
+      goal.
+    </p>
+  </div>
+
+  <div class="goal-grid">
+    <article class="goal-card strength" appLandingReveal>
+      <div class="goal-art" aria-hidden="true">
+        <span>01</span><app-landing-icon name="strength" />
+      </div>
+      <div class="goal-card__body">
+        <h3>BUILD STRENGTH</h3>
+        <p>Track sets, repetitions and weights while following your progress over time.</p>
+      </div>
+    </article>
+    <article class="goal-card weight" appLandingReveal [revealDelay]="80">
+      <div class="goal-art" aria-hidden="true">
+        <span>02</span><app-landing-icon name="weight" />
+      </div>
+      <div class="goal-card__body">
+        <h3>LOSE WEIGHT</h3>
+        <p>Build a consistent routine and follow general calorie and activity estimates.</p>
+      </div>
+    </article>
+    <article class="goal-card endurance" appLandingReveal [revealDelay]="160">
+      <div class="goal-art" aria-hidden="true">
+        <span>03</span><app-landing-icon name="endurance" />
+      </div>
+      <div class="goal-card__body">
+        <h3>IMPROVE ENDURANCE</h3>
+        <p>Monitor workout and attendance consistency while working towards better stamina.</p>
+      </div>
+    </article>
+    <article class="goal-card active" appLandingReveal [revealDelay]="240">
+      <div class="goal-art" aria-hidden="true">
+        <span>04</span><app-landing-icon name="active" />
+      </div>
+      <div class="goal-card__body">
+        <h3>STAY ACTIVE</h3>
+        <p>Use planned training days, reminders and progress history to maintain momentum.</p>
+      </div>
+    </article>
+  </div>
+
+  <a class="journey-link" routerLink="/register"
+    >START YOUR JOURNEY <span aria-hidden="true">→</span></a
+  >
+</section>

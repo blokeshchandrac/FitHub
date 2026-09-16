@@ -6,8 +6,8 @@ public sealed class ParkingStatusEventConfiguration : EntityConfiguration<Parkin
 {
     protected override void ConfigureEntity(EntityTypeBuilder<ParkingStatusEvent> builder)
     {
-        builder.Property(x=>x.PreviousState).HasConversion<string>().HasMaxLength(30);
-        builder.Property(x=>x.State).HasConversion<string>().HasMaxLength(30);
+        builder.Property(x=>x.PreviousState).HasConversion<string>().HasMaxLength(40);
+        builder.Property(x=>x.State).HasConversion<string>().HasMaxLength(40);
         builder.Property(x=>x.Confidence).HasPrecision(5,4);
         builder.Property(x=>x.Source).HasMaxLength(100).IsRequired();
         builder.Property(x=>x.EventType).HasConversion<string>().HasMaxLength(40);

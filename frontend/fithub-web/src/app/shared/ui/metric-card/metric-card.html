@@ -1,0 +1,5 @@
+<article [class]="'metric metric-' + tone()">
+  <span>{{ label() }}</span>
+  <strong>{{ value() }}</strong>
+  @if (supportingText()) { <small>{{ supportingText() }}</small> }
+</article>

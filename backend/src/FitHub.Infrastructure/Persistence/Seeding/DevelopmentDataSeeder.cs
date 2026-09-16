@@ -28,7 +28,8 @@ public sealed class DevelopmentDataSeeder(
     {
         await dbContext.Database.MigrateAsync(cancellationToken);
         await SeedRolesAsync();
-        await SeedUsersAsync();
+        var developmentBranchId = await SeedDevelopmentBranchAsync(cancellationToken);
+        await SeedUsersAsync(developmentBranchId);
         await SeedMembershipPlansAsync(cancellationToken);
         await SeedDemoMembershipsAsync(cancellationToken);
         await SeedExercisesAsync(cancellationToken);
@@ -49,7 +50,7 @@ public sealed class DevelopmentDataSeeder(
         }
     }
 
-    private async Task SeedUsersAsync()
+    private async Task SeedUsersAsync(Guid developmentBranchId)
     {
         var password = configuration["SeedData:DemoPassword"];
         if (string.IsNullOrWhiteSpace(password))
@@ -66,11 +67,11 @@ public sealed class DevelopmentDataSeeder(
                 throw new InvalidOperationException($"Development seed role '{account.Role}' is not supported.");
             }
 
-            await EnsureUserAsync(account.Email, account.FirstName, account.LastName, account.Role, password);
+            await EnsureUserAsync(account.Email, account.FirstName, account.LastName, account.Role, password, developmentBranchId);
         }
     }
 
-    private async Task EnsureUserAsync(string email, string firstName, string lastName, string role, string password)
+    private async Task EnsureUserAsync(string email, string firstName, string lastName, string role, string password, Guid developmentBranchId)
     {
         var user = await userManager.FindByEmailAsync(email);
         if (user is null)
@@ -92,6 +93,26 @@ public sealed class DevelopmentDataSeeder(
         {
             EnsureSucceeded(await userManager.AddToRoleAsync(user, role), $"assign role '{role}' to '{email}'");
         }
+
+        if (!user.OnboardingCompleted || user.ExperienceLevel is null
+            || user.PlannedTrainingDays == TrainingDaySchedule.None || user.PreferredGymBranchId is null)
+        {
+            user.MarkOnboardingCompleteForSeed(developmentBranchId, DateTimeOffset.UtcNow);
+            EnsureSucceeded(await userManager.UpdateAsync(user), $"complete demo profile for '{email}'");
+        }
+    }
+
+    private async Task<Guid> SeedDevelopmentBranchAsync(CancellationToken cancellationToken)
+    {
+        const string code = "DEMO";
+        var branch = await dbContext.GymBranches.SingleOrDefaultAsync(item => item.Code == code, cancellationToken);
+        if (branch is null)
+        {
+            branch = new GymBranch(code, "FitHub Demonstration Branch");
+            dbContext.GymBranches.Add(branch);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        return branch.Id;
     }
 
     private async Task SeedMembershipPlansAsync(CancellationToken cancellationToken)
@@ -133,7 +154,8 @@ public sealed class DevelopmentDataSeeder(
             }
 
             var providerReference = $"demo-seed-{user.Id:N}";
-            if (!await dbContext.Payments.AnyAsync(item => item.ProviderReference == providerReference, cancellationToken))
+            var seededPayment = await dbContext.Payments.SingleOrDefaultAsync(item => item.ProviderReference == providerReference, cancellationToken);
+            if (seededPayment is null)
             {
                 var payment = new Payment
                 {
@@ -143,10 +165,15 @@ public sealed class DevelopmentDataSeeder(
                     PurchaseKind = MembershipPurchaseKind.Purchase,
                     Amount = plan.Price,
                     Currency = "EUR",
-                    ProviderReference = providerReference
+                    ProviderReference = providerReference,
+                    IsSeededDemo = true
                 };
                 payment.MarkSucceeded(now.AddDays(-7));
                 dbContext.Payments.Add(payment);
+            }
+            else if (!seededPayment.IsSeededDemo)
+            {
+                seededPayment.IsSeededDemo = true;
             }
         }
 
@@ -166,12 +193,17 @@ public sealed class DevelopmentDataSeeder(
 
     private async Task SeedEquipmentAsync(CancellationToken cancellationToken)
     {
-        if (await dbContext.Equipment.AnyAsync(cancellationToken)) return;
-
-        dbContext.Equipment.AddRange(
-            new Equipment("TREAD-001", "Treadmill") { Location = "Cardio zone" },
-            new Equipment("BIKE-001", "Exercise bike") { Location = "Cardio zone" },
-            new Equipment("RACK-001", "Power rack") { Location = "Strength zone" });
+        var required = new[]
+        {
+            new { Code = "TREAD-001", Name = "Treadmill", Location = "Cardio zone" },
+            new { Code = "BIKE-001", Name = "Exercise bike", Location = "Cardio zone" },
+            new { Code = "RACK-001", Name = "Power rack", Location = "Strength zone" },
+            new { Code = "CABLE-001", Name = "Cable machine", Location = "Strength zone" }
+        };
+        var existingCodes = await dbContext.Equipment.Select(item => item.Code).ToListAsync(cancellationToken);
+        dbContext.Equipment.AddRange(required
+            .Where(item => !existingCodes.Contains(item.Code, StringComparer.Ordinal))
+            .Select(item => new Equipment(item.Code, item.Name) { Location = item.Location }));
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
@@ -204,12 +236,13 @@ public sealed class DevelopmentDataSeeder(
 
     private async Task SeedParkingSpacesAsync(CancellationToken cancellationToken)
     {
-        if (await dbContext.ParkingSpaces.AnyAsync(cancellationToken)) return;
-
-        dbContext.ParkingSpaces.AddRange(
-            new ParkingSpace("A-01", "A") { IsAccessible = true },
-            new ParkingSpace("A-02", "A"),
-            new ParkingSpace("B-01", "B"));
+        var required = Enumerable.Range(0, 3)
+            .SelectMany(row => Enumerable.Range(1, 4).Select(number => new { Code = $"P-{(char)('A' + row)}{number}", Zone = $"Simulation row {(char)('A' + row)}" }))
+            .ToArray();
+        var existing = await dbContext.ParkingSpaces.Select(x => x.Code).ToListAsync(cancellationToken);
+        dbContext.ParkingSpaces.AddRange(required
+            .Where(item => !existing.Contains(item.Code, StringComparer.Ordinal))
+            .Select(item => new ParkingSpace(item.Code, item.Zone)));
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
@@ -217,8 +250,9 @@ public sealed class DevelopmentDataSeeder(
     {
         var credential=configuration["SeedData:ParkingCameraCredential"];
         if(string.IsNullOrWhiteSpace(credential)){logger.LogWarning("Parking camera was not seeded because SeedData:ParkingCameraCredential is not configured.");return;}
-        if(await dbContext.ParkingCameras.AnyAsync(cancellationToken))return;
-        var camera=new ParkingCamera("SIM-PARKING-01","pending");camera.SetCredentialHash(parkingCameraPasswordHasher.HashPassword(camera,credential));dbContext.ParkingCameras.Add(camera);await dbContext.SaveChangesAsync(cancellationToken);
+        const string cameraCode="SIM-PARK-CAMERA-01";
+        if(await dbContext.ParkingCameras.AnyAsync(x=>x.CameraCode==cameraCode,cancellationToken))return;
+        var camera=new ParkingCamera(cameraCode,"pending");camera.SetCredentialHash(parkingCameraPasswordHasher.HashPassword(camera,credential));dbContext.ParkingCameras.Add(camera);await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private static void EnsureSucceeded(IdentityResult result, string operation)

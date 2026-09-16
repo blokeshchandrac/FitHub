@@ -11,6 +11,10 @@ public interface IWorkoutService
     Task<WorkoutSessionDto?> CompleteSessionAsync(Guid userId, Guid sessionId, string? notes, CancellationToken cancellationToken = default);
     Task<WorkoutSessionDto?> GetSessionAsync(Guid userId, Guid sessionId, CancellationToken cancellationToken = default);
     Task<IReadOnlyCollection<WorkoutHistoryDto>> GetHistoryAsync(Guid userId, CancellationToken cancellationToken = default);
-    Task<IReadOnlyCollection<MemberSummaryDto>> GetMembersAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<WorkoutTemplateDto>> GetTrainerPlansAsync(Guid trainerUserId, CancellationToken cancellationToken = default);
+    Task<WorkoutTemplateDto> CreateTrainerPlanAsync(Guid trainerUserId, UpsertWorkoutTemplateCommand command, CancellationToken cancellationToken = default);
+    Task<WorkoutTemplateDto?> UpdateTrainerPlanAsync(Guid trainerUserId, Guid templateId, UpsertWorkoutTemplateCommand command, CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<WorkoutAssignmentDto>> GetTrainerAssignmentsAsync(Guid trainerUserId, CancellationToken cancellationToken = default);
     Task<WorkoutAssignmentDto> AssignTemplateAsync(Guid trainerUserId, Guid templateId, Guid memberUserId, CancellationToken cancellationToken = default);
+    Task<bool> RemoveAssignmentAsync(Guid trainerUserId, Guid assignmentId, CancellationToken cancellationToken = default);
 }

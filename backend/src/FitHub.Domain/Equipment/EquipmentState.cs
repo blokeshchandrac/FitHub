@@ -6,5 +6,6 @@ public enum EquipmentState
     Occupied,
     SharingAllowed,
     Maintenance,
-    Offline
+    Offline,
+    ClearanceWarning
 }

@@ -1,0 +1,6 @@
+section { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-card); box-shadow: var(--shadow-card); padding: clamp(var(--space-4), 3vw, var(--space-6)); }
+section.elevated { background: var(--color-surface-elevated); box-shadow: var(--shadow-elevated); }
+header { display: grid; gap: var(--space-1); margin-bottom: var(--space-5); }
+h2 { color: var(--color-text-primary); font-size: var(--font-size-xl); line-height: var(--line-height-tight); margin: 0; }
+p { color: var(--color-text-secondary); margin: 0; }
+.card-content { min-width: 0; }

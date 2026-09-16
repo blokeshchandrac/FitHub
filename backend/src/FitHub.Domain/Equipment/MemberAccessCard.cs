@@ -9,4 +9,16 @@ public sealed class MemberAccessCard : Entity
     public ApplicationUser User { get; private set; } = null!;
     public string UidHash { get; private set; } = string.Empty;
     public bool IsActive { get; private set; } = true;
+
+    public void Block(DateTimeOffset timestamp)
+    {
+        IsActive = false;
+        MarkUpdated(timestamp);
+    }
+
+    public void Unblock(DateTimeOffset timestamp)
+    {
+        IsActive = true;
+        MarkUpdated(timestamp);
+    }
 }

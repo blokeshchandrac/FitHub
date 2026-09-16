@@ -3,6 +3,6 @@ namespace FitHub.Api.Controllers;
 [ApiController][Authorize(Policy=AuthorizationPolicies.ActiveMembership)][Route("api/notifications")]
 public sealed class NotificationsController(INotificationService service):ControllerBase
 {
-    [HttpGet]public Task<IReadOnlyCollection<NotificationDto>> Get(CancellationToken ct)=>service.GetAsync(User.GetRequiredUserId(),ct);
+    [HttpGet]public Task<IReadOnlyCollection<NotificationDto>> Get(CancellationToken ct)=>service.GetAsync(User.GetRequiredUserId(),User.IsInRole(AuthorizationPolicies.Member),ct);
     [HttpPost("{notificationId:guid}/read")]public async Task<IActionResult> Read(Guid notificationId,CancellationToken ct)=>await service.MarkReadAsync(User.GetRequiredUserId(),notificationId,ct)?NoContent():NotFound();
 }

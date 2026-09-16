@@ -1,0 +1,50 @@
+<header class="site-header">
+  <div class="header-inner">
+    <a
+      class="brand"
+      href="#landing-main"
+      (click)="scrollToSection($event, 'landing-main')"
+      aria-label="FitHub home"
+    >
+      <span class="brand-mark" aria-hidden="true">FH</span>
+      <span>FitHub</span>
+    </a>
+
+    <nav class="desktop-nav" aria-label="Public navigation">
+      <a href="#why-fithub" (click)="scrollToSection($event, 'why-fithub')">Why FitHub</a>
+      <a href="#your-goals" (click)="scrollToSection($event, 'your-goals')">Your Goals</a>
+      <a href="#fithub-experience" (click)="scrollToSection($event, 'fithub-experience')"
+        >The Experience</a
+      >
+    </nav>
+
+    <div class="desktop-actions">
+      <a class="sign-in" routerLink="/login">Sign In</a>
+      <a class="join" routerLink="/register">Join FitHub</a>
+    </div>
+
+    <button
+      class="menu-button"
+      type="button"
+      aria-controls="public-mobile-menu"
+      [attr.aria-expanded]="menuOpen()"
+      (click)="toggleMenu()"
+    >
+      <span class="visually-hidden">{{ menuOpen() ? 'Close navigation' : 'Open navigation' }}</span>
+      <span aria-hidden="true"></span><span aria-hidden="true"></span
+      ><span aria-hidden="true"></span>
+    </button>
+  </div>
+
+  @if (menuOpen()) {
+    <nav id="public-mobile-menu" class="mobile-menu" aria-label="Mobile public navigation">
+      <a href="#why-fithub" (click)="scrollToSection($event, 'why-fithub')">Why FitHub</a>
+      <a href="#your-goals" (click)="scrollToSection($event, 'your-goals')">Your Goals</a>
+      <a href="#fithub-experience" (click)="scrollToSection($event, 'fithub-experience')"
+        >The Experience</a
+      >
+      <a routerLink="/login" (click)="closeMenu()">Sign In</a>
+      <a class="mobile-join" routerLink="/register" (click)="closeMenu()">Join FitHub</a>
+    </nav>
+  }
+</header>

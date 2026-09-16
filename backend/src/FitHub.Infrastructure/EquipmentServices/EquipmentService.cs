@@ -7,10 +7,26 @@ namespace FitHub.Infrastructure.EquipmentServices;
 
 public sealed class EquipmentService(FitHubDbContext dbContext, IEquipmentRealtimeNotifier notifier, ICardUidHasher cardHasher, IMembershipService membershipService, IEquipmentAccessService accessService, TimeProvider timeProvider) : IEquipmentService
 {
-    public async Task<IReadOnlyCollection<EquipmentSummaryDto>> ListAsync(bool includeLiveDetails, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<EquipmentSummaryDto>> ListAsync(bool includeLiveDetails, bool includeMemberIdentities = false, CancellationToken cancellationToken = default)
     {
         var items = await dbContext.Equipment.AsNoTracking().OrderBy(x => x.Name).ToListAsync(cancellationToken);
-        return items.Select(x => new EquipmentSummaryDto(x.Id, x.Code, x.Name, x.Location, includeLiveDetails ? x.CurrentState.ToString() : null, includeLiveDetails ? Color(x.CurrentState) : "", includeLiveDetails)).ToList();
+        var memberIds = includeMemberIdentities
+            ? items.SelectMany(item => new[] { item.OwnerUserId, item.PartnerUserId }).Where(id => id.HasValue).Select(id => id!.Value).Distinct().ToArray()
+            : [];
+        var names = memberIds.Length == 0
+            ? new Dictionary<Guid, string>()
+            : await dbContext.Users.AsNoTracking().Where(user => memberIds.Contains(user.Id))
+                .ToDictionaryAsync(user => user.Id, user => string.IsNullOrWhiteSpace(user.PreferredName)
+                    ? (user.FirstName + " " + user.LastName).Trim()
+                    : user.PreferredName, cancellationToken);
+        return items.Select(x => new EquipmentSummaryDto(
+            x.Id, x.Code, x.Name, x.Location,
+            includeLiveDetails ? x.CurrentState.ToString() : null,
+            includeLiveDetails ? Color(x.CurrentState) : string.Empty,
+            includeLiveDetails,
+            x.OwnerUserId.HasValue && names.TryGetValue(x.OwnerUserId.Value, out var owner) ? owner : null,
+            x.PartnerUserId.HasValue && names.TryGetValue(x.PartnerUserId.Value, out var partner) ? partner : null,
+            x.UpdatedAt)).ToList();
     }
 
     public async Task<EquipmentDetailDto?> GetAsync(Guid equipmentId, CancellationToken cancellationToken = default)
@@ -51,6 +67,9 @@ public sealed class EquipmentService(FitHubDbContext dbContext, IEquipmentRealti
     }
 
     public async Task SensorAsync(Guid equipmentId, bool detected, CancellationToken cancellationToken = default) => _ = await ChangeAsync(equipmentId, x => x.RecordPresence(detected, Now()), cancellationToken);
+
+    public Task<EquipmentDetailDto?> ConfirmClearanceAsync(Guid equipmentId, TimeSpan gracePeriod, CancellationToken cancellationToken = default) =>
+        ChangeAsync(equipmentId, x => x.ConfirmClearance(Now(), gracePeriod), cancellationToken);
 
     public async Task HeartbeatAsync(Guid equipmentId, CancellationToken cancellationToken = default)
     {
@@ -100,13 +119,22 @@ public sealed class EquipmentService(FitHubDbContext dbContext, IEquipmentRealti
     private async Task<Guid> FindCardUserAsync(string uid, CancellationToken ct)
     {
         var hash = cardHasher.Hash(uid);
-        var card = await dbContext.MemberAccessCards.AsNoTracking().SingleOrDefaultAsync(x => x.UidHash == hash && x.IsActive, ct);
+        var card = await dbContext.MemberAccessCards.AsNoTracking().Include(x => x.User).SingleOrDefaultAsync(x => x.UidHash == hash && x.IsActive, ct);
         if (card is null) throw new UnauthorizedAccessException("The access card is not recognized.");
+        if (!card.User.IsActive) throw new UnauthorizedAccessException("The card holder account is disabled.");
         if (!await membershipService.HasActiveMembershipAsync(card.UserId, ct) || !await accessService.IsCheckedInAsync(card.UserId, ct))
             throw new UnauthorizedAccessException("The card holder must have an active membership and be checked in.");
         return card.UserId;
     }
     private DateTimeOffset Now() => timeProvider.GetUtcNow();
-    private static string Color(EquipmentState state) => state switch { EquipmentState.Available => "green", EquipmentState.Occupied => "red", EquipmentState.SharingAllowed => "yellow", EquipmentState.Maintenance => "grey", _ => "dark-grey" };
+    private static string Color(EquipmentState state) => state switch
+    {
+        EquipmentState.Available => "green",
+        EquipmentState.Occupied => "red",
+        EquipmentState.SharingAllowed => "yellow",
+        EquipmentState.ClearanceWarning => "orange",
+        EquipmentState.Maintenance or EquipmentState.Offline => "grey",
+        _ => "grey"
+    };
     private static EquipmentDetailDto Map(Domain.Equipment.Equipment x) => new(x.Id, x.Code, x.Name, x.Description, x.Location, x.CurrentState.ToString(), Color(x.CurrentState), x.OwnerUserId, x.PartnerUserId, x.PresenceDetected, x.ClearanceGraceStartedAt, x.Version, x.StatusHistory.OrderByDescending(h => h.OccurredAt).Select(h => new EquipmentHistoryDto(h.Id, h.PreviousState.ToString(), h.State.ToString(), h.EventType.ToString(), h.OccurredAt, h.ChangedByUserId, h.Note)).ToList());
 }

@@ -50,7 +50,7 @@ Set-Location ../..
 docker compose --env-file .env.example config
 docker compose up -d --build
 Invoke-WebRequest http://localhost:8080/health
-Invoke-WebRequest http://localhost:4200/
+Invoke-WebRequest http://localhost:4040/
 docker compose down
 ```
 
@@ -65,4 +65,3 @@ Use strong local values in an untracked `.env` before `up`; `.env.example` conta
 - Test upload size, MIME allowlist, magic bytes, authenticated retrieval, random filenames, and traversal restrictions.
 - Inspect CORS, HTTPS/HSTS, cookies, JWT validation, rate limiting, logging, safe errors, security headers, and dependency advisories.
 - Inspect landmarks, labels, accessible names, focus styles, reduced motion, and desktop/mobile overflow in the built container.
-

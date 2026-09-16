@@ -42,7 +42,7 @@ The host's default Node 22.17.0 fails before Angular compilation because Angular
 - Angular tests: 20 passed, 0 failed, across 7 test files.
 - Angular production build: passed.
 - Initial bundle: 142.06 kB raw / 35.98 kB estimated transfer.
-- Live frontend: HTTP 200 at `http://localhost:4200`.
+- Live frontend: HTTP 200 at `http://localhost:4040`.
 - Live API health: `{"status":"Healthy"}` at `http://localhost:8080/health`.
 
 All redesign verification must run with the `.nvmrc` version or the Docker build runtime, not the incompatible host default.
@@ -639,19 +639,26 @@ Record screenshots for the affected checkpoint and check page-level overflow, cl
 
 ## Implementation checkpoints
 
-### Checkpoint 1 — design foundation
+### Checkpoint 1A — design system foundation
 
 - Core/reset/theme/motion tokens
 - Volt, Pulse, Ocean, and High Contrast themes
 - Early `ThemeService` restoration and accessible Profile/Settings selection
 - Shared icon/button/card/metric/status/state/page-header primitives
+- Development-only design-system preview and focused component tests
+- Focus foundation, reduced-motion, and forced-colour support
+
+No Stripe, membership, API, domain, database, business-flow, shell, or navigation rewrite belongs in Checkpoint 1A.
+
+### Checkpoint 1B — shells, navigation, and fullscreen
+
 - Public, onboarding, active-member, trainer, and administrator shell compositions from shared primitives
 - Desktop sidebar, tablet rail, mobile bottom navigation, More menu
 - User/notification/search controls as supported by current routes
 - Fullscreen service and shell control; no active-workout focus feature yet
-- Skip link, focus foundation, safe areas, reduced-motion/forced-colour support
+- Skip link and safe-area-aware shell behavior
 
-No Stripe, membership, API, domain, database, or business-flow rewrite belongs in Checkpoint 1.
+No Stripe, membership, API, domain, database, or business-flow rewrite belongs in Checkpoint 1B.
 
 ### Checkpoint 2 — public and onboarding
 

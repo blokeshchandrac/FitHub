@@ -1,0 +1,28 @@
+<section class="feature-page">
+  <a routerLink="/administration/trainers">← Back to trainers</a>
+  <p class="eyebrow">Trainer administration</p>
+  <h1>{{trainer()?.user?.displayName || 'Trainer assignments'}}</h1>
+  @if(trainer();as details){<p>{{details.user.email}} · {{details.user.isActive?'Enabled':'Blocked'}}</p>}
+  @if(error()){<p class="api-error" role="alert">{{error()}}</p>}
+  @if(message()){<p class="success-message" role="status">{{message()}}</p>}
+  @if(loading()){<div class="foundation-card">Loading trainer assignments…</div>}@else{
+    <div class="two-column">
+      <form class="foundation-card form-stack" (ngSubmit)="assign()">
+        <h2>Assign an active Member</h2>
+        <label for="member-search">Search eligible Members</label>
+        <div class="inline-actions"><input id="member-search" [formControl]="memberSearch" placeholder="Name or email"><button type="button" class="secondary-button" (click)="searchMembers()">Search</button></div>
+        <label for="eligible-member">Member</label>
+        <select id="eligible-member" [formControl]="memberId"><option value="">Choose a Member</option>@for(member of eligibleMembers();track member.id){<option [value]="member.id">{{member.displayName}} · {{member.email}}</option>}</select>
+        @if(memberId.touched&&memberId.invalid){<p class="field-error">Choose an eligible Member.</p>}
+        <button class="primary-button" [disabled]="saving()||!trainer()?.user?.isActive">{{saving()?'Assigning…':'Assign Member'}}</button>
+      </form>
+      <div class="foundation-card">
+        <h2>Current assignments</h2>
+        @for(assignment of assignments();track assignment.id){@if(assignment.status==='Active'){
+          <div class="summary-row"><span><strong>{{assignment.memberName}}</strong><br><small>{{assignment.memberEmail}} · Assigned {{assignment.assignedAt|date:'medium'}} by {{assignment.assignedByAdministratorName}}</small></span><button class="secondary-button" type="button" (click)="unassign(assignment)">Unassign</button></div>
+        }}@empty{<p>No assignment history.</p>}
+      </div>
+    </div>
+    <div class="foundation-card"><h2>Assignment history</h2>@for(assignment of assignments();track assignment.id){<p class="summary-row"><span><strong>{{assignment.memberName}}</strong><br><small>Assigned {{assignment.assignedAt|date:'medium'}} by {{assignment.assignedByAdministratorName}}@if(assignment.unassignedAt){ · Ended {{assignment.unassignedAt|date:'medium'}} by {{assignment.unassignedByAdministratorName}}}</small></span><span class="status-badge">{{assignment.status}}</span></p>}</div>
+  }
+</section>

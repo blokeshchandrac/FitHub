@@ -30,7 +30,7 @@ docker compose up --build
 
 Then open:
 
-- Web application: `http://localhost:4200`
+- Web application: `http://localhost:4040`
 - API health: `http://localhost:8080/health`
 - Swagger UI: `http://localhost:8080/swagger`
 
@@ -143,6 +143,14 @@ npm start
 
 `npm start` prompts for the API URL, equipment UUID, device ID/key and simulated card UID. See the [state-machine rules](docs/design/equipment-state-machine.md) and [Stage 6 API](docs/design/stage-6-equipment-api.md).
 
+### Smart Equipment Virtual Lab
+
+Open `http://localhost:4040/simulation` to choose a virtual lab. The existing smart-equipment lab is now at `/simulation/equipment`; use **Refresh Members** to load the minimum safe projection of existing development Member accounts, memberships, and card status. Local Mode executes equipment rules in TypeScript; Connected Mode revalidates those development records and sends isolated events through `/api/simulation/events` and `/hubs/simulation`. Session-only status scenarios never update PostgreSQL. The 30-second clearance period can be changed with `SIMULATION_CLEARANCE_SECONDS` (1–60 for testing; use 30 for normal demonstrations).
+
+The interactive smart-parking lab is at `http://localhost:4040/simulation/parking`. Add and drive up to six fictional cars, run the geometry-based virtual camera, test correct parking, two-space obstruction, camera failure and confidence handling. Local Mode never calls the API. Connected Mode requires a signed-in Administrator and persists only the twelve `P-A1`–`P-C4` development spaces plus deduplicated simulation alerts. Normal scans run every 60 seconds; Demo Speed runs every five seconds. The implementation is explicitly a geometry simulator, not real computer vision. See [Smart Parking Virtual Lab](docs/design/smart-parking-virtual-lab.md).
+
+See [the virtual-lab design and demonstration guide](docs/design/smart-equipment-virtual-lab.md) for the state rules, wiring faults, full NFC workflow, and manual verification steps.
+
 ## Parking simulation and recommendations
 
 Stage 7 adds authenticated synthetic parking events, confidence/source history, SignalR parking updates, administrator corrections, a visual parking simulator, and transparent rule-based member recommendations. The simulator is not computer vision; a future OpenCV service can replace it through the same API.
@@ -151,8 +159,8 @@ Configure `PARKING_CAMERA_CREDENTIAL` in `.env`, then run the simulator from `si
 
 ## Administration, class booking, and notifications
 
-Stage 8 adds the administrator analytics dashboard, five CSV operational reports, staff-created classes with capacity-safe waiting lists, and six idempotent member notification types. Revenue and payment CSV values include only completed (`Succeeded`) payments. See [Stage 8 administration and module rules](docs/design/stage-8-administration-modules.md).
+Stage 8 now uses explicit role workflows: Trainers create sessions for Administrator approval, Members book only approved future sessions, and staff inspect participants without entering Member booking pages. Administration includes user, membership-card and membership access controls, Trainer account creation, class review, system activity, and net confirmed-payment revenue. See [Stage 8 administration and module rules](docs/design/stage-8-administration-modules.md).
 
 ## Testing and stabilization
 
-Stage 9 provides the complete verification plan, test cases, results, traceability matrix, security review, and residual-risk record in [docs/testing](docs/testing/README.md). The current verified baseline is 134 passing automated tests across backend, frontend, and both simulators, plus a clean three-service Docker startup smoke test.
+Stage 9 provides the complete verification plan, test cases, results, traceability matrix, security review, and residual-risk record in [docs/testing](docs/testing/README.md). The latest role/workflow stabilization verifies 210 backend, Angular, and simulator tests plus a healthy three-service Docker startup; details are in the [test results](docs/testing/test-results.md).

@@ -56,7 +56,8 @@ public sealed class Equipment : Entity
     {
         EnsureOwner(userId);
         EnsureState(EquipmentState.SharingAllowed);
-        PartnerUserId = null;
+        if (PartnerUserId.HasValue)
+            throw new InvalidOperationException("The sharing partner must finish before sharing can be disabled.");
         return TransitionTo(EquipmentState.Occupied, EquipmentEventType.SharingDisabled, occurredAt, userId);
     }
 
@@ -95,11 +96,22 @@ public sealed class Equipment : Entity
         if (detected)
         {
             ClearanceGraceStartedAt = null;
+            if (CurrentState == EquipmentState.ClearanceWarning)
+            {
+                // Sharing is an active-use state, while Clearance Warning is a temporary safety state.
+                // Restore the former only when a partner still belongs to the session.
+                var restored = PartnerUserId.HasValue ? EquipmentState.SharingAllowed : EquipmentState.Occupied;
+                return TransitionTo(restored, EquipmentEventType.ClearanceWarningCancelled, occurredAt);
+            }
             return Record(EquipmentEventType.PresenceDetected, occurredAt);
         }
 
         if (CurrentState is EquipmentState.Occupied or EquipmentState.SharingAllowed)
+        {
+            // Absence starts a grace period; it never releases equipment on a single clear reading.
             ClearanceGraceStartedAt = occurredAt;
+            return TransitionTo(EquipmentState.ClearanceWarning, EquipmentEventType.ClearanceWarningStarted, occurredAt);
+        }
 
         // A clear reading never makes equipment Available. It only starts the grace period.
         return Record(EquipmentEventType.ClearanceWarningStarted, occurredAt);
@@ -109,8 +121,8 @@ public sealed class Equipment : Entity
     {
         if (PresenceDetected != false || ClearanceGraceStartedAt is null || occurredAt - ClearanceGraceStartedAt < gracePeriod)
             throw new InvalidOperationException("Clearance has not remained confirmed for the required grace period.");
-        if (CurrentState is not (EquipmentState.Occupied or EquipmentState.SharingAllowed))
-            throw new InvalidOperationException("Clearance confirmation applies only to occupied equipment.");
+        if (CurrentState != EquipmentState.ClearanceWarning)
+            throw new InvalidOperationException("Clearance confirmation applies only to equipment in Clearance Warning.");
 
         OwnerUserId = null;
         PartnerUserId = null;
@@ -131,7 +143,10 @@ public sealed class Equipment : Entity
     public EquipmentStatusEvent MarkOffline(DateTimeOffset occurredAt, string reason)
     {
         if (CurrentState == EquipmentState.Offline) return Record(EquipmentEventType.HeartbeatMissed, occurredAt, note: reason);
-        StateBeforeOffline = CurrentState;
+        StateBeforeOffline = CurrentState == EquipmentState.ClearanceWarning
+            ? PartnerUserId.HasValue ? EquipmentState.SharingAllowed : EquipmentState.Occupied
+            : CurrentState;
+        ClearanceGraceStartedAt = null;
         return TransitionTo(EquipmentState.Offline, EquipmentEventType.DeviceDisconnected, occurredAt, note: reason);
     }
 

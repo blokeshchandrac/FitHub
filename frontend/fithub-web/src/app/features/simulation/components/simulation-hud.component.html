@@ -1,0 +1,21 @@
+<section class="hud" aria-label="Simulation heads-up display">
+  <div class="hud-metrics">
+    <article><span>Selected machine</span><strong>{{ machine().name }}</strong><small>{{ machine().id }}</small></article>
+    <article><span>Equipment state</span><strong class="state" [attr.data-state]="machine().state">{{ machine().state.replaceAll('_', ' ') }}</strong><small>Text and light indicator</small></article>
+    <article><span>Connected Members</span><strong>{{ memberNames() }}</strong><small>Maximum two while sharing</small></article>
+    <article><span>HC-SR04</span><strong>{{ machine().sensorResult.replaceAll('_', ' ') }}</strong><small>{{ machine().distanceMetres.toFixed(1) }} m · {{ sensorDescription() }} · {{ clearanceSeconds() }} s rule</small></article>
+    <article><span>PN532 reader</span><strong>{{ nfcStatus() }}</strong><small>NFC authorization input</small></article>
+    <article><span>Connections</span><strong>{{ mode() === 'local' ? 'Local Mode' : 'Connected Mode' }}</strong><small>API {{ backendState() }} · SignalR {{ signalRState() }}</small></article>
+  </div>
+  <div class="event-panel">
+    <div class="event-heading">
+      <div><span>Live trace</span><h2>Simulation event history</h2></div>
+      <div class="hud-actions"><button type="button" (click)="helpRequested.emit()">Help</button><button type="button" (click)="resetRequested.emit()">Reset</button></div>
+    </div>
+    <ol aria-live="polite" aria-relevant="additions">
+      @for (event of events(); track event.id) {
+        <li [attr.data-tone]="event.tone"><time [dateTime]="event.occurredAt">{{ event.occurredAt | slice:11:19 }}</time><div><strong>{{ event.action }}</strong><p>{{ event.detail }}</p><small>{{ event.result }} · {{ event.mode === 'local' ? 'Local Mode' : 'Connected Mode' }}@if (event.memberName) { · {{ event.memberName }}}@if (event.machineName) { · {{ event.machineName }}}</small></div></li>
+      }
+    </ol>
+  </div>
+</section>

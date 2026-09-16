@@ -1,0 +1,6 @@
+<section class="state" [attr.aria-labelledby]="headingId">
+  <span class="state-icon" aria-hidden="true"><fit-app-icon [name]="icon()" size="lg" /></span>
+  <h2 [id]="headingId">{{ title() }}</h2>
+  <p>{{ message() }}</p>
+  <div class="state-action"><ng-content /></div>
+</section>

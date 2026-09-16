@@ -1,0 +1,8 @@
+<section class="state" role="alert" [attr.aria-labelledby]="headingId">
+  <span class="state-icon" aria-hidden="true"><fit-app-icon name="circle-alert" size="lg" /></span>
+  <div>
+    <h2 [id]="headingId">{{ title() }}</h2>
+    <p>{{ message() }}</p>
+  </div>
+  @if (retryLabel()) { <fit-button variant="secondary" (pressed)="retry.emit()">{{ retryLabel() }}</fit-button> }
+</section>

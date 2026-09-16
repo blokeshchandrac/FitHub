@@ -51,7 +51,8 @@ internal sealed class JwtTokenIssuer(IOptions<JwtOptions> options, TimeProvider 
             user.Email ?? string.Empty,
             user.FirstName,
             user.LastName,
-            roles);
+            roles,
+            user.OnboardingCompleted);
 
         return new AuthenticationTokens(
             new JwtSecurityTokenHandler().WriteToken(jwt),

@@ -1,0 +1,94 @@
+:host {
+  inset: 0;
+  overflow: hidden;
+  position: absolute;
+  z-index: -1;
+}
+picture,
+.shade,
+.glow {
+  inset: 0;
+  position: absolute;
+}
+img {
+  animation:
+    athlete-reveal 1.15s cubic-bezier(0.2, 0.72, 0.2, 1) 0.12s both,
+    athlete-drift 18s ease-in-out 1.4s infinite alternate;
+  height: 100%;
+  object-fit: cover;
+  object-position: right center;
+  transform-origin: right center;
+  width: 100%;
+}
+.shade {
+  background:
+    linear-gradient(
+      90deg,
+      #050706 0%,
+      rgb(5 7 6 / 98%) 20%,
+      rgb(5 7 6 / 84%) 42%,
+      rgb(5 7 6 / 18%) 72%,
+      rgb(5 7 6 / 34%) 100%
+    ),
+    linear-gradient(0deg, #050706 0%, transparent 30%);
+}
+.glow {
+  animation: light-breathe 9s ease-in-out infinite alternate;
+  background: radial-gradient(circle at 72% 44%, rgb(35 239 188 / 14%), transparent 31%);
+}
+@keyframes athlete-reveal {
+  from {
+    filter: brightness(0.45);
+    opacity: 0;
+    transform: scale(1.04);
+  }
+  to {
+    filter: brightness(1);
+    opacity: 1;
+    transform: scale(1.01);
+  }
+}
+@keyframes athlete-drift {
+  from {
+    transform: scale(1.01) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.045) translate3d(-0.3%, 0, 0);
+  }
+}
+@keyframes light-breathe {
+  from {
+    opacity: 0.55;
+    transform: translateX(-1%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(1%);
+  }
+}
+@media (max-width: 900px) {
+  img {
+    object-position: center 18%;
+    transform-origin: center top;
+  }
+  .shade {
+    background:
+      linear-gradient(
+        0deg,
+        #050706 2%,
+        rgb(5 7 6 / 92%) 39%,
+        rgb(5 7 6 / 36%) 78%,
+        rgb(5 7 6 / 70%) 100%
+      ),
+      linear-gradient(90deg, rgb(5 7 6 / 72%), transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  img,
+  .glow {
+    animation: none;
+    filter: none;
+    opacity: 1;
+    transform: none;
+  }
+}

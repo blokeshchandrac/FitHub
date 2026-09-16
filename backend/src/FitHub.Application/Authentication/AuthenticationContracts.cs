@@ -4,7 +4,7 @@ public sealed record RegisterCommand(string Email, string Password, string First
 
 public sealed record LoginCommand(string Email, string Password);
 
-public sealed record CurrentUserDto(Guid Id, string Email, string FirstName, string LastName, IReadOnlyCollection<string> Roles);
+public sealed record CurrentUserDto(Guid Id, string Email, string FirstName, string LastName, IReadOnlyCollection<string> Roles, bool OnboardingCompleted);
 
 public sealed record AuthenticationTokens(
     string AccessToken,

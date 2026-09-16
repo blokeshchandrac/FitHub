@@ -1,0 +1,46 @@
+:host {
+  display: block;
+}
+
+.landing-page {
+  --landing-accent: #c9ff4a;
+  --landing-accent-hover: #dcff82;
+  --landing-ink: #080b09;
+  --landing-charcoal: #101411;
+  --landing-paper: #f2f3ed;
+  --landing-muted: #aab3aa;
+  background: var(--landing-ink);
+  color: #f6f8f4;
+  isolation: isolate;
+  min-height: 100vh;
+  overflow: clip;
+}
+
+.skip-link {
+  background: var(--landing-accent);
+  border-radius: 0 0 0.55rem 0.55rem;
+  color: var(--landing-ink);
+  font-weight: 800;
+  left: 1rem;
+  padding: 0.75rem 1rem;
+  position: fixed;
+  top: 0;
+  transform: translateY(-120%);
+  transition: transform var(--motion-fast) var(--ease-standard);
+  z-index: 100;
+}
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+main {
+  display: block;
+}
+
+@media (forced-colors: active) {
+  .landing-page {
+    --landing-accent: Highlight;
+    --landing-ink: Canvas;
+    --landing-paper: Canvas;
+  }
+}

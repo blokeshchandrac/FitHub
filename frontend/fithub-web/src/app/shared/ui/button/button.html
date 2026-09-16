@@ -1,0 +1,11 @@
+<button
+  [class]="'button button-' + variant() + ' button-' + size()"
+  [type]="type()"
+  [disabled]="disabled() || busy()"
+  [attr.aria-label]="accessibleLabel()"
+  [attr.aria-busy]="busy() ? 'true' : null"
+  (click)="activate($event)"
+>
+  @if (busy()) { <span class="spinner" aria-hidden="true"></span> }
+  <span class="button-content"><ng-content /></span>
+</button>

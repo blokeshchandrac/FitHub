@@ -1,0 +1,37 @@
+<main class="simulation-selection">
+  <header>
+    <a class="brand" routerLink="/login"><span aria-hidden="true">FH</span><strong>FitHub</strong></a>
+    <a class="app-link" routerLink="/login">Return to FitHub application</a>
+  </header>
+
+  <section aria-labelledby="simulation-title">
+    <p class="eyebrow">Development and demonstration</p>
+    <h1 id="simulation-title">FitHub Simulation Lab</h1>
+    <p class="introduction">Choose an isolated virtual environment to demonstrate FitHub's connected gym technology.</p>
+
+    <div class="simulation-grid">
+      <article>
+        <div class="visual equipment" aria-hidden="true"><span>ESP32</span><i></i><i></i><i></i></div>
+        <div class="content">
+          <p class="card-kicker">Virtual equipment laboratory</p>
+          <h2>Smart Equipment</h2>
+          <p>Test equipment claiming, NFC access, sharing and sensor-based clearance.</p>
+          <a routerLink="/simulation/equipment">Open Equipment Simulation <span aria-hidden="true">→</span></a>
+        </div>
+      </article>
+
+      <article>
+        <div class="visual parking" aria-hidden="true">
+          @for (space of [1, 2, 3, 4, 5, 6]; track space) { <i></i> }
+          <span>CAM 01</span>
+        </div>
+        <div class="content">
+          <p class="card-kicker">Virtual parking environment</p>
+          <h2>Smart Parking</h2>
+          <p>Drive virtual cars, test parking-space detection and identify incorrect parking.</p>
+          <a routerLink="/simulation/parking">Open Parking Simulation <span aria-hidden="true">→</span></a>
+        </div>
+      </article>
+    </div>
+  </section>
+</main>

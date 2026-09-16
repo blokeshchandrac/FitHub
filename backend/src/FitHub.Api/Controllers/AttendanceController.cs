@@ -14,11 +14,13 @@ public sealed class AttendanceController(IAttendanceService attendanceService) :
 {
     [HttpGet]
     [Authorize(Policy = AuthorizationPolicies.ActiveMembership)]
+    [Authorize(Policy = AuthorizationPolicies.Member)]
     public Task<AttendanceSummaryDto> GetSummary(CancellationToken cancellationToken) =>
         attendanceService.GetSummaryAsync(User.GetRequiredUserId(), cancellationToken);
 
     [HttpPost("check-in-token")]
     [Authorize(Policy = AuthorizationPolicies.ActiveMembership)]
+    [Authorize(Policy = AuthorizationPolicies.Member)]
     public Task<CheckInTokenDto> GenerateToken(CancellationToken cancellationToken) =>
         attendanceService.GenerateTokenAsync(User.GetRequiredUserId(), cancellationToken);
 
@@ -35,4 +37,9 @@ public sealed class AttendanceController(IAttendanceService attendanceService) :
             return BadRequest(new { message = exception.Message });
         }
     }
+
+    [HttpPost("validate-access")]
+    [Authorize(Policy = AuthorizationPolicies.Staff)]
+    public Task<AccessValidationDto> ValidateAccess(CheckInRequest request, CancellationToken cancellationToken) =>
+        attendanceService.ValidateAccessAsync(request.Token, cancellationToken);
 }

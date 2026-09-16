@@ -1,1 +1,27 @@
-<section class="feature-page narrow-page"><p class="eyebrow">Trainer tools</p><h1>Assign workout plans</h1><form class="foundation-card form-stack" [formGroup]="form" (ngSubmit)="assign()"><label for="assignment-template">Template</label><select id="assignment-template" formControlName="templateId"><option value="">Choose a template</option>@for (template of templates(); track template.id) { <option [value]="template.id">{{ template.name }}</option> }</select><label for="assignment-member">Member</label><select id="assignment-member" formControlName="memberUserId"><option value="">Choose a member</option>@for (member of members(); track member.id) { <option [value]="member.id">{{ member.firstName }} {{ member.lastName }} · {{ member.email }}</option> }</select>@if (message()) { <div class="success-message">{{ message() }}</div> }@if (error()) { <div class="api-error">{{ error() }}</div> }<button class="primary-button" type="submit">Assign plan</button></form></section>
+<section class="feature-page">
+  <p class="eyebrow">Trainer tools</p><h1>Workout plans</h1>
+  <p>Create reusable trainer-owned plans and assign them only to Members assigned to you by an Administrator.</p>
+  @if(message()){<div class="success-message" role="status">{{message()}}</div>}
+  @if(error()){<div class="api-error" role="alert">{{error()}}</div>}
+  <div class="two-column">
+    <form class="foundation-card form-stack" [formGroup]="planForm" (ngSubmit)="savePlan()">
+      <h2>{{editingPlanId()?'Edit trainer plan':'Create trainer plan'}}</h2>
+      <label for="plan-name">Plan name</label><input id="plan-name" formControlName="name" maxlength="150">
+      <label for="plan-description">Description</label><textarea id="plan-description" formControlName="description" maxlength="2000"></textarea>
+      <label for="plan-exercises">Exercises</label><select id="plan-exercises" formControlName="exerciseIds" multiple size="6">@for(exercise of exercises();track exercise.id){<option [value]="exercise.id">{{exercise.name}} · {{exercise.muscleGroup}}</option>}</select>
+      @if(planForm.controls.exerciseIds.touched&&planForm.controls.exerciseIds.invalid){<p class="field-error">Select at least one exercise.</p>}
+      <div class="inline-actions"><button class="primary-button">{{editingPlanId()?'Save changes':'Create plan'}}</button>@if(editingPlanId()){<button class="secondary-button" type="button" (click)="cancelEdit()">Cancel</button>}</div>
+    </form>
+    <div class="foundation-card"><h2>Your reusable plans</h2>@for(plan of plans();track plan.id){<p class="summary-row"><span><strong>{{plan.name}}</strong><br><small>{{plan.exercises.length}} exercise(s)</small></span><button class="secondary-button" type="button" (click)="editPlan(plan)">Edit</button></p>}@empty{<p>No trainer plans yet.</p>}</div>
+  </div>
+  <div class="two-column">
+    <form class="foundation-card form-stack" [formGroup]="assignmentForm" (ngSubmit)="assign()">
+      <h2>Assign a plan</h2>
+      <label for="assignment-template">Your plan</label><select id="assignment-template" formControlName="templateId"><option value="">Choose a plan</option>@for(plan of plans();track plan.id){<option [value]="plan.id">{{plan.name}}</option>}</select>
+      <label for="assignment-member">Assigned Member</label><select id="assignment-member" formControlName="memberUserId"><option value="">Choose an assigned Member</option>@for(member of members();track member.id){<option [value]="member.id">{{member.displayName}} · {{member.profile.fitnessGoal}} · {{member.profile.experienceLevel || 'Profile incomplete'}}</option>}</select>
+      @if(members().length===0){<p>No Members are assigned to you. Ask an Administrator to create an assignment.</p>}
+      <button class="primary-button" [disabled]="members().length===0||plans().length===0">Assign plan</button>
+    </form>
+    <div class="foundation-card"><h2>Plan assignments</h2>@for(assignment of assignments();track assignment.id){<p class="summary-row"><span><strong>{{assignment.templateName}}</strong><br><small>{{assignment.memberName}} · {{assignment.isActive?'Active':'Ended'}}</small></span>@if(assignment.isActive){<button class="secondary-button" type="button" (click)="removeAssignment(assignment)">Remove</button>}</p>}@empty{<p>No plan assignments yet.</p>}</div>
+  </div>
+</section>

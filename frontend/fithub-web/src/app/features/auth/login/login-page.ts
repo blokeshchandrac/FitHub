@@ -10,6 +10,7 @@ import { AccountContextService } from '../../../core/membership/account-context.
   selector: 'app-login-page',
   imports: [ReactiveFormsModule, RouterLink],
   templateUrl: './login-page.html',
+  styleUrl: './login-page.scss',
 })
 export class LoginPage {
   private readonly authentication = inject(AuthenticationService);

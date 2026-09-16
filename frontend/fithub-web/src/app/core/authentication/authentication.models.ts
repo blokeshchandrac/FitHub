@@ -4,6 +4,7 @@ export interface CurrentUser {
   readonly firstName: string;
   readonly lastName: string;
   readonly roles: readonly string[];
+  readonly onboardingCompleted: boolean;
 }
 
 export interface AuthenticationResponse {

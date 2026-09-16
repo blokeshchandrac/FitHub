@@ -41,6 +41,11 @@ This matrix maps the delivered Stage 1-8 requirements and Stage 9 quality requir
 | S8 capacity/duplicate/waitlist/cancel | booking aggregate/service/controller | booking unit/integration tests |
 | S8 six notifications | notification entity/service/page | notification tests |
 | S8 admin/trainer authorization | controller policies and route guards | metadata/role tests |
+| Role-specific navigation and personal-page separation | persistent Angular shell and explicit API policies | layout specs; authentication API role tests |
+| Administrator user/card/membership controls | administration management service/controller | domain and authentication integration tests |
+| Trainer class approval workflow | booking aggregate, role controllers, PostgreSQL locking | class unit/integration/API tests |
+| First-time Member onboarding | profile fields/service/controller and Angular Welcome route | profile API and login destination tests |
+| Confirmed net Stripe revenue and refunds | payment fields, webhook, dashboard query | Stripe mapping/webhook and Stage 8 revenue tests |
 | S9 backend unit tests | `FitHub.UnitTests` | 83/83 pass |
 | S9 PostgreSQL integration/API validation | `FitHub.IntegrationTests` | 36/36 pass |
 | S9 Angular component/service tests | six spec files | 11/11 pass; coverage |

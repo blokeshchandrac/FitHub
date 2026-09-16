@@ -6,11 +6,26 @@ public sealed class EquipmentTests
     [Fact] public void AvailableCanBeClaimed() { var item = New(); item.Claim(_owner, Now); Assert.Equal(EquipmentState.Occupied, item.CurrentState); Assert.Equal(_owner, item.OwnerUserId); }
     [Fact] public void OccupiedCannotBeClaimedBySecondMember() { var item = Claimed(); Assert.Throws<InvalidOperationException>(() => item.Claim(Guid.NewGuid(), Now)); }
     [Fact] public void OwnerCanEnableAndDisableSharing() { var item = Claimed(); item.AllowSharing(_owner, Now); Assert.Equal(EquipmentState.SharingAllowed, item.CurrentState); item.ReturnToOccupied(_owner, Now); Assert.Equal(EquipmentState.Occupied, item.CurrentState); }
+
+    [Fact]
+    public void OwnerCannotDisableSharingWhilePartnerIsAssigned()
+    {
+        var partner = Guid.NewGuid();
+        var item = Claimed();
+        item.AllowSharing(_owner, Now);
+        item.Claim(partner, Now);
+
+        var error = Assert.Throws<InvalidOperationException>(() => item.ReturnToOccupied(_owner, Now));
+
+        Assert.Contains("partner must finish", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(EquipmentState.SharingAllowed, item.CurrentState);
+        Assert.Equal(partner, item.PartnerUserId);
+    }
     [Fact] public void SharingSupportsOnlyOnePartner() { var item = Claimed(); item.AllowSharing(_owner, Now); item.Claim(Guid.NewGuid(), Now); Assert.Throws<InvalidOperationException>(() => item.Claim(Guid.NewGuid(), Now)); }
     [Fact] public void NonOwnerCannotChangeSharing() { var item = Claimed(); Assert.Throws<UnauthorizedAccessException>(() => item.AllowSharing(Guid.NewGuid(), Now)); }
     [Fact] public void OwnerReleaseMakesClearMachineAvailable() { var item = Claimed(); item.Release(_owner, Now); Assert.Equal(EquipmentState.Available, item.CurrentState); }
     [Fact] public void DetectedObjectBlocksUnconfirmedRelease() { var item = Claimed(); item.RecordPresence(true, Now); Assert.Throws<InvalidOperationException>(() => item.Release(_owner, Now)); }
-    [Fact] public void SensorClearStartsGraceButNeverReleases() { var item = Claimed(); item.RecordPresence(false, Now); Assert.Equal(EquipmentState.Occupied, item.CurrentState); Assert.NotNull(item.ClearanceGraceStartedAt); }
+    [Fact] public void SensorClearStartsDistinctWarningButNeverReleasesImmediately() { var item = Claimed(); item.RecordPresence(false, Now); Assert.Equal(EquipmentState.ClearanceWarning, item.CurrentState); Assert.NotNull(item.ClearanceGraceStartedAt); Assert.Equal(_owner, item.OwnerUserId); }
     [Fact] public void ConfirmedClearanceRequiresElapsedGrace() { var item = Claimed(); item.RecordPresence(false, Now); Assert.Throws<InvalidOperationException>(() => item.ConfirmClearance(Now.AddSeconds(29), TimeSpan.FromSeconds(30))); item.ConfirmClearance(Now.AddSeconds(30), TimeSpan.FromSeconds(30)); Assert.Equal(EquipmentState.Available, item.CurrentState); }
     [Fact] public void HeartbeatRestoresStateBeforeOffline() { var item = Claimed(); item.MarkOffline(Now, "timeout"); item.RestoreFromHeartbeat(Now.AddMinutes(1)); Assert.Equal(EquipmentState.Occupied, item.CurrentState); }
     [Fact] public void AdministratorOverrideRequiresReason() { var item = Claimed(); Assert.Throws<ArgumentException>(() => item.AdministratorOverride(EquipmentState.Maintenance, Now, Guid.NewGuid(), "")); }
@@ -19,6 +34,7 @@ public sealed class EquipmentTests
     [Fact] public void AvailableMachineRejectsSharingAndRelease() { var item = New(); Assert.Throws<UnauthorizedAccessException>(() => item.AllowSharing(_owner, Now)); Assert.Throws<InvalidOperationException>(() => item.Release(_owner, Now)); }
     [Fact] public void NonOwnerCannotRelease() { var item = Claimed(); Assert.Throws<UnauthorizedAccessException>(() => item.Release(Guid.NewGuid(), Now)); }
     [Fact] public void NewPresenceCancelsClearanceGrace() { var item = Claimed(); item.RecordPresence(false, Now); item.RecordPresence(true, Now.AddSeconds(2)); Assert.Null(item.ClearanceGraceStartedAt); Assert.Equal(EquipmentState.Occupied, item.CurrentState); }
+    [Fact] public void ReturningMemberRestoresSharingAfterClearanceWarning() { var item = Claimed(); item.AllowSharing(_owner, Now); item.Claim(Guid.NewGuid(), Now); item.RecordPresence(false, Now); Assert.Equal(EquipmentState.ClearanceWarning, item.CurrentState); item.RecordPresence(true, Now.AddSeconds(2)); Assert.Equal(EquipmentState.SharingAllowed, item.CurrentState); }
     [Fact] public void ClearanceCannotBeConfirmedWithoutClearReading() { var item = Claimed(); Assert.Throws<InvalidOperationException>(() => item.ConfirmClearance(Now.AddMinutes(1), TimeSpan.FromSeconds(30))); }
     private Equipment New() => new("TEST-01", "Test machine");
     private Equipment Claimed() { var item = New(); item.Claim(_owner, Now); return item; }

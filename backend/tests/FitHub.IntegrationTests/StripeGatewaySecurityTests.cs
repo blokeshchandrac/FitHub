@@ -43,6 +43,10 @@ public sealed class StripeGatewaySecurityTests
                     @object = "checkout.session",
                     client_reference_id = paymentId,
                     payment_status = "paid",
+                    payment_intent = "pi_stage9_signed",
+                    amount_total = 4990,
+                    currency = "eur",
+                    livemode = false,
                     metadata = new Dictionary<string, string>
                     {
                         ["user_id"] = Guid.NewGuid().ToString(),
@@ -60,6 +64,10 @@ public sealed class StripeGatewaySecurityTests
         Assert.Equal(paymentId, result.PaymentId);
         Assert.Equal(PaymentWebhookOutcome.Succeeded, result.Outcome);
         Assert.Equal(MembershipPurchaseKind.Purchase, result.PurchaseKind);
+        Assert.Equal("pi_stage9_signed", result.StripePaymentIntentId);
+        Assert.Equal(4990, result.AmountTotalMinor);
+        Assert.Equal("eur", result.Currency);
+        Assert.False(result.IsLiveMode);
     }
 
     [Fact]

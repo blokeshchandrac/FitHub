@@ -37,6 +37,11 @@ export class AccountContextService {
       this.errorValue.set(null);
       return of({ effectiveState: 'None', currentMembership: null, plans: [], payments: [] });
     }
+    if (this.authentication.hasRole('Member') && !this.authentication.currentUser()?.onboardingCompleted) {
+      this.loadingValue.set(false);
+      this.errorValue.set(null);
+      return of({ effectiveState: 'None', currentMembership: null, plans: [], payments: [] });
+    }
     if (!this.refreshRequest) {
       this.loadingValue.set(true);
       this.errorValue.set(null);
@@ -67,7 +72,8 @@ export class AccountContextService {
 
   destination(): string {
     if (this.authentication.hasRole('Administrator')) return '/administration';
-    if (this.authentication.hasRole('Trainer')) return '/workouts/assign';
+    if (this.authentication.hasRole('Trainer')) return '/trainer/classes';
+    if (this.authentication.hasRole('Member') && !this.authentication.currentUser()?.onboardingCompleted) return '/welcome';
     if (this.membershipStateValue() === 'Active') return '/dashboard';
     if (this.membershipStateValue() === 'PendingPayment') return '/membership/confirming';
     if (['Expired', 'Cancelled', 'PastDue'].includes(this.membershipStateValue())) return '/membership/renew';

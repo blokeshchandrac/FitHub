@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { MembershipOverview, MembershipPlan, MembershipPlanCommand, MembershipPurchaseKind } from './membership.models';
+import { MembershipOverview, MembershipPlan, MembershipPlanCommand, MembershipPurchaseKind, PaymentReconciliationResult } from './membership.models';
 
 @Injectable({ providedIn: 'root' })
 export class MembershipService {
@@ -12,6 +12,16 @@ export class MembershipService {
 
   createCheckout(planId: string, purchaseKind: MembershipPurchaseKind): Observable<{ paymentId: string; checkoutUrl: string }> {
     return this.http.post<{ paymentId: string; checkoutUrl: string }>('/api/membership/checkout', { planId, purchaseKind });
+  }
+
+  reconcileCheckout(checkoutSessionId?: string): Observable<PaymentReconciliationResult> {
+    const endpoint = checkoutSessionId
+      ? `/api/membership/checkout/${encodeURIComponent(checkoutSessionId)}/reconcile`
+      : '/api/membership/checkout/reconcile';
+    return this.http.post<PaymentReconciliationResult>(
+      endpoint,
+      {},
+    );
   }
 
   getAdministrativePlans(): Observable<MembershipPlan[]> {

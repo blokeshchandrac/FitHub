@@ -1,0 +1,5 @@
+.state { align-items: center; background: var(--color-surface); border: 1px dashed var(--color-border-strong); border-radius: var(--radius-card); display: grid; gap: var(--space-3); justify-items: center; padding: clamp(var(--space-6), 6vw, var(--space-12)); text-align: center; }
+.state-icon { align-items: center; background: var(--color-accent-soft); border-radius: var(--radius-pill); color: var(--color-accent); display: inline-flex; height: 3.5rem; justify-content: center; width: 3.5rem; }
+h2 { font-size: var(--font-size-xl); margin: 0; }
+p { color: var(--color-text-secondary); margin: 0; max-width: 34rem; }
+.state-action:empty { display: none; }

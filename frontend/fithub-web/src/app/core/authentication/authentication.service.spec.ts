@@ -9,7 +9,7 @@ describe('AuthenticationService', () => {
   const response: AuthenticationResponse = {
     accessToken: 'memory-only-access-token',
     expiresAt: '2026-08-13T00:00:00Z',
-    user: { id: 'user-1', email: 'member@fithub.test', firstName: 'Test', lastName: 'Member', roles: ['Member'] },
+    user: { id: 'user-1', email: 'member@fithub.test', firstName: 'Test', lastName: 'Member', roles: ['Member'], onboardingCompleted: true },
   };
 
   beforeEach(() => TestBed.configureTestingModule({

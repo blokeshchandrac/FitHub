@@ -1,6 +1,7 @@
 using FitHub.Application.Analytics;
 using FitHub.Application.Common;
 using FitHub.Application.Workouts;
+using FitHub.Application.Trainers;
 using FitHub.Domain.Identity;
 using FitHub.Domain.Workouts;
 using FitHub.Infrastructure.Persistence;
@@ -12,6 +13,7 @@ namespace FitHub.Infrastructure.Workouts;
 internal sealed class WorkoutService(
     FitHubDbContext dbContext,
     UserManager<ApplicationUser> userManager,
+    ITrainerMemberAccessService trainerMemberAccess,
     TimeProvider timeProvider) : IWorkoutService
 {
     public async Task<IReadOnlyCollection<ExerciseDto>> SearchExercisesAsync(string? search, string? muscleGroup, string? equipment, CancellationToken cancellationToken = default)
@@ -33,7 +35,8 @@ internal sealed class WorkoutService(
             .Where(item => item.MemberUserId == userId && item.IsActive)
             .Select(item => item.WorkoutTemplateId).ToListAsync(cancellationToken);
         var templates = await dbContext.WorkoutTemplates.AsNoTracking().Include(item => item.Exercises)
-            .Where(item => item.OwnerUserId == userId || item.IsPublic || assignedIds.Contains(item.Id))
+            .Where(item => (item.OwnerUserId == userId && item.Kind == WorkoutTemplateKind.Personal)
+                || (item.IsPublic && item.Kind == WorkoutTemplateKind.Personal) || assignedIds.Contains(item.Id))
             .OrderBy(item => item.Name).ToListAsync(cancellationToken);
         return templates.Select(item => MapTemplate(item, assignedIds.Contains(item.Id))).ToList();
     }
@@ -47,7 +50,8 @@ internal sealed class WorkoutService(
             OwnerUserId = userId,
             Name = command.Name.Trim(),
             Description = string.IsNullOrWhiteSpace(command.Description) ? null : command.Description.Trim(),
-            IsPublic = command.IsPublic
+            IsPublic = command.IsPublic,
+            Kind = WorkoutTemplateKind.Personal
         };
         foreach (var exercise in exercises) template.Exercises.Add(exercise);
         dbContext.WorkoutTemplates.Add(template);
@@ -59,7 +63,8 @@ internal sealed class WorkoutService(
     {
         WorkoutValidators.Validate(command);
         var template = await dbContext.WorkoutTemplates.Include(item => item.Exercises)
-            .SingleOrDefaultAsync(item => item.Id == templateId && item.OwnerUserId == userId, cancellationToken);
+            .SingleOrDefaultAsync(item => item.Id == templateId && item.OwnerUserId == userId
+                && item.Kind == WorkoutTemplateKind.Personal, cancellationToken);
         if (template is null) return null;
         var exercises = await LoadExercisesAsync(command.ExerciseIds, cancellationToken);
         template.Name = command.Name.Trim();
@@ -143,22 +148,89 @@ internal sealed class WorkoutService(
         return sessions.Select(item => new WorkoutHistoryDto(item.Id, item.WorkoutTemplate?.Name ?? "Free workout", item.Status, item.StartedAt, item.EndedAt, Volume(item))).ToList();
     }
 
-    public async Task<IReadOnlyCollection<MemberSummaryDto>> GetMembersAsync(CancellationToken cancellationToken = default) =>
-        (await userManager.GetUsersInRoleAsync("Member")).Where(item => item.IsActive)
-            .OrderBy(item => item.LastName).Select(item => new MemberSummaryDto(item.Id, item.Email ?? string.Empty, item.FirstName, item.LastName)).ToList();
+    public async Task<IReadOnlyCollection<WorkoutTemplateDto>> GetTrainerPlansAsync(
+        Guid trainerUserId, CancellationToken cancellationToken = default)
+    {
+        var plans = await dbContext.WorkoutTemplates.AsNoTracking().Include(item => item.Exercises)
+            .Where(item => item.OwnerUserId == trainerUserId && item.Kind == WorkoutTemplateKind.TrainerPlan)
+            .OrderBy(item => item.Name).ToListAsync(cancellationToken);
+        return plans.Select(item => MapTemplate(item, false)).ToList();
+    }
+
+    public async Task<WorkoutTemplateDto> CreateTrainerPlanAsync(
+        Guid trainerUserId, UpsertWorkoutTemplateCommand command, CancellationToken cancellationToken = default)
+    {
+        WorkoutValidators.Validate(command);
+        var exercises = await LoadExercisesAsync(command.ExerciseIds, cancellationToken);
+        var plan = new WorkoutTemplate
+        {
+            OwnerUserId = trainerUserId,
+            Name = command.Name.Trim(),
+            Description = string.IsNullOrWhiteSpace(command.Description) ? null : command.Description.Trim(),
+            IsPublic = false,
+            Kind = WorkoutTemplateKind.TrainerPlan
+        };
+        foreach (var exercise in exercises) plan.Exercises.Add(exercise);
+        dbContext.WorkoutTemplates.Add(plan);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return MapTemplate(plan, false);
+    }
+
+    public async Task<WorkoutTemplateDto?> UpdateTrainerPlanAsync(
+        Guid trainerUserId, Guid templateId, UpsertWorkoutTemplateCommand command, CancellationToken cancellationToken = default)
+    {
+        WorkoutValidators.Validate(command);
+        var plan = await dbContext.WorkoutTemplates.Include(item => item.Exercises).SingleOrDefaultAsync(item =>
+            item.Id == templateId && item.OwnerUserId == trainerUserId && item.Kind == WorkoutTemplateKind.TrainerPlan,
+            cancellationToken);
+        if (plan is null) return null;
+        var exercises = await LoadExercisesAsync(command.ExerciseIds, cancellationToken);
+        plan.Name = command.Name.Trim();
+        plan.Description = string.IsNullOrWhiteSpace(command.Description) ? null : command.Description.Trim();
+        plan.IsPublic = false;
+        plan.Exercises.Clear();
+        foreach (var exercise in exercises) plan.Exercises.Add(exercise);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return MapTemplate(plan, false);
+    }
+
+    public async Task<IReadOnlyCollection<WorkoutAssignmentDto>> GetTrainerAssignmentsAsync(
+        Guid trainerUserId, CancellationToken cancellationToken = default) =>
+        await dbContext.WorkoutPlanAssignments.AsNoTracking().Where(item => item.TrainerUserId == trainerUserId
+                && dbContext.TrainerMemberAssignments.Any(relation => relation.TrainerId == trainerUserId
+                    && relation.MemberId == item.MemberUserId && relation.Status == TrainerMemberAssignmentStatus.Active))
+            .Include(item => item.WorkoutTemplate).Include(item => item.MemberUser)
+            .OrderByDescending(item => item.AssignedAt)
+            .Select(item => new WorkoutAssignmentDto(item.Id, item.WorkoutTemplateId, item.WorkoutTemplate.Name,
+                item.MemberUserId, (item.MemberUser.PreferredName ?? (item.MemberUser.FirstName + " " + item.MemberUser.LastName)).Trim(),
+                item.AssignedAt, item.EndedAt, item.IsActive))
+            .ToListAsync(cancellationToken);
 
     public async Task<WorkoutAssignmentDto> AssignTemplateAsync(Guid trainerUserId, Guid templateId, Guid memberUserId, CancellationToken cancellationToken = default)
     {
-        var template = await dbContext.WorkoutTemplates.SingleOrDefaultAsync(item => item.Id == templateId && (item.OwnerUserId == trainerUserId || item.IsPublic), cancellationToken)
+        await trainerMemberAccess.EnsureAssignedAsync(trainerUserId, memberUserId, cancellationToken);
+        var template = await dbContext.WorkoutTemplates.SingleOrDefaultAsync(item => item.Id == templateId
+            && item.OwnerUserId == trainerUserId && item.Kind == WorkoutTemplateKind.TrainerPlan, cancellationToken)
             ?? throw Validation("templateId", "Workout template is unavailable for assignment.");
         var member = await userManager.FindByIdAsync(memberUserId.ToString());
-        if (member is null || !await userManager.IsInRoleAsync(member, "Member")) throw Validation("memberUserId", "Member was not found.");
+        if (member is null || !member.IsActive || !await userManager.IsInRoleAsync(member, "Member")) throw Validation("memberUserId", "Member was not found.");
         var existing = await dbContext.WorkoutPlanAssignments.FirstOrDefaultAsync(item => item.WorkoutTemplateId == templateId && item.MemberUserId == memberUserId && item.IsActive, cancellationToken);
-        if (existing is not null) return new(existing.Id, template.Id, template.Name, member.Id, $"{member.FirstName} {member.LastName}", existing.AssignedAt, true);
+        if (existing is not null) return new(existing.Id, template.Id, template.Name, member.Id, $"{member.FirstName} {member.LastName}", existing.AssignedAt, existing.EndedAt, true);
         var assignment = new WorkoutPlanAssignment(templateId, memberUserId, trainerUserId, timeProvider.GetUtcNow());
         dbContext.WorkoutPlanAssignments.Add(assignment);
         await dbContext.SaveChangesAsync(cancellationToken);
-        return new(assignment.Id, template.Id, template.Name, member.Id, $"{member.FirstName} {member.LastName}", assignment.AssignedAt, true);
+        return new(assignment.Id, template.Id, template.Name, member.Id, $"{member.FirstName} {member.LastName}", assignment.AssignedAt, assignment.EndedAt, true);
+    }
+
+    public async Task<bool> RemoveAssignmentAsync(Guid trainerUserId, Guid assignmentId, CancellationToken cancellationToken = default)
+    {
+        var assignment = await dbContext.WorkoutPlanAssignments.SingleOrDefaultAsync(item =>
+            item.Id == assignmentId && item.TrainerUserId == trainerUserId && item.IsActive, cancellationToken);
+        if (assignment is null) return false;
+        await trainerMemberAccess.EnsureAssignedAsync(trainerUserId, assignment.MemberUserId, cancellationToken);
+        assignment.Deactivate(timeProvider.GetUtcNow());
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     private async Task<WorkoutSessionDto> MapSessionAsync(WorkoutSession session, CancellationToken cancellationToken)
@@ -195,6 +267,6 @@ internal sealed class WorkoutService(
     private static decimal Volume(WorkoutSession session) => AnalyticsRules.WorkoutVolume(session.ExerciseLogs.SelectMany(item => item.Sets).Select(set => (set.Repetitions, set.WeightKg)));
     private static readonly System.Linq.Expressions.Expression<Func<Exercise, ExerciseDto>> MapExerciseExpression = item => new(item.Id, item.Name, item.MuscleGroup, item.Equipment, item.Instructions);
     private static ExerciseDto MapExercise(Exercise item) => new(item.Id, item.Name, item.MuscleGroup, item.Equipment, item.Instructions);
-    private static WorkoutTemplateDto MapTemplate(WorkoutTemplate item, bool assigned) => new(item.Id, item.Name, item.Description, item.IsPublic, item.OwnerUserId, item.Exercises.Select(MapExercise).ToList(), assigned);
+    private static WorkoutTemplateDto MapTemplate(WorkoutTemplate item, bool assigned) => new(item.Id, item.Name, item.Description, item.IsPublic, item.OwnerUserId, item.Exercises.Select(MapExercise).ToList(), assigned, item.Kind);
     private static CommandValidationException Validation(string key, string message) => new(new Dictionary<string, string[]> { [key] = [message] });
 }

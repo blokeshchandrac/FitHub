@@ -58,6 +58,22 @@ public sealed class Membership : Entity
 
     public void MarkExpired() => Status = MembershipStatus.Expired;
 
+    public void Pause()
+    {
+        if (Status != MembershipStatus.Active)
+            throw new InvalidOperationException("Only an active membership can be disabled.");
+        Status = MembershipStatus.Paused;
+    }
+
+    public void Reactivate(DateTimeOffset timestamp)
+    {
+        if (Status != MembershipStatus.Paused)
+            throw new InvalidOperationException("Only a disabled membership can be enabled.");
+        if (EndsAt <= timestamp)
+            throw new InvalidOperationException("An expired membership cannot be re-enabled.");
+        Status = MembershipStatus.Active;
+    }
+
     private static void EnsurePeriod(DateTimeOffset startsAt, DateTimeOffset endsAt)
     {
         if (endsAt <= startsAt) throw new ArgumentException("Membership end must be after its start.", nameof(endsAt));

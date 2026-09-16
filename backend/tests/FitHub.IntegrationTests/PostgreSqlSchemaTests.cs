@@ -36,6 +36,8 @@ public sealed class PostgreSqlSchemaTests : IAsyncLifetime
         _ = await dbContext.Users.CountAsync();
         _ = await dbContext.Equipment.CountAsync();
         _ = await dbContext.ParkingSpaces.CountAsync();
+        _ = await dbContext.GymBranches.CountAsync();
+        _ = await dbContext.TrainerMemberAssignments.CountAsync();
     }
 
     [Fact]
@@ -104,7 +106,17 @@ public sealed class PostgreSqlSchemaTests : IAsyncLifetime
         Assert.Equal(3, await dbContext.Users.CountAsync());
         Assert.Equal(2, await dbContext.MembershipPlans.CountAsync());
         Assert.Equal(3, await dbContext.Exercises.CountAsync());
-        Assert.Equal(3, await dbContext.Equipment.CountAsync());
-        Assert.Equal(3, await dbContext.ParkingSpaces.CountAsync());
+        Assert.Equal(4, await dbContext.Equipment.CountAsync());
+        Assert.Contains(await dbContext.Equipment.Select(equipment => equipment.Code).ToListAsync(), code => code == "CABLE-001");
+        Assert.Single(await dbContext.GymBranches.ToListAsync());
+        Assert.All(await dbContext.Users.ToListAsync(), user => Assert.True(user.OnboardingCompleted));
+        var parkingSpaceCodes = await dbContext.ParkingSpaces
+            .OrderBy(space => space.Code)
+            .Select(space => space.Code)
+            .ToListAsync();
+
+        Assert.Equal(
+            ["P-A1", "P-A2", "P-A3", "P-A4", "P-B1", "P-B2", "P-B3", "P-B4", "P-C1", "P-C2", "P-C3", "P-C4"],
+            parkingSpaceCodes);
     }
 }

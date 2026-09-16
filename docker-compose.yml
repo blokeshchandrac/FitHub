@@ -37,6 +37,10 @@ services:
       SeedData__EquipmentDeviceCredential: ${EQUIPMENT_DEVICE_CREDENTIAL}
       SeedData__MemberCardUid: ${EQUIPMENT_MEMBER_CARD_UID}
       SeedData__ParkingCameraCredential: ${PARKING_CAMERA_CREDENTIAL}
+      Simulation__Enabled: ${SIMULATION_ENABLED:-true}
+      Simulation__ClearanceSeconds: ${SIMULATION_CLEARANCE_SECONDS:-30}
+      Simulation__ParkingScanSeconds: ${SIMULATION_PARKING_SCAN_SECONDS:-60}
+      Simulation__ParkingDemoScanSeconds: ${SIMULATION_PARKING_DEMO_SCAN_SECONDS:-5}
     ports:
       - "${API_PORT:-8080}:8080"
     depends_on:
@@ -48,7 +52,7 @@ services:
       context: frontend/fithub-web
       dockerfile: Dockerfile
     ports:
-      - "${FRONTEND_PORT:-4200}:80"
+      - "${FRONTEND_PORT:-4040}:80"
     depends_on:
       - api
 

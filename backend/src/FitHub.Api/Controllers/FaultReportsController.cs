@@ -8,6 +8,7 @@ namespace FitHub.Api.Controllers;
 
 [ApiController]
 [Authorize(Policy = AuthorizationPolicies.ActiveMembership)]
+[Authorize(Policy = AuthorizationPolicies.Member)]
 [Route("api/fault-reports")]
 public sealed class FaultReportsController(IFaultReportService service) : ControllerBase
 {

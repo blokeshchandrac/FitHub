@@ -1,0 +1,68 @@
+<section class="workbench" aria-labelledby="workbench-title">
+  <header>
+    <div>
+      <p class="lab-kicker">Electronics workbench</p>
+      <h2 id="workbench-title">{{ machine().deviceId }}</h2>
+    </div>
+    <span class="hardware-state" [class.offline]="disconnected('power')">{{ disconnected('power') ? 'Power disconnected' : machine().restarting ? 'Restarting' : 'Powered' }}</span>
+  </header>
+
+  <div class="board-area" aria-label="Virtual equipment controller wiring">
+    <div class="component esp32"><strong>ESP32</strong><small>FitHub controller</small><span>USB / 3.3 V</span></div>
+    <div class="component breadboard"><strong>Breadboard</strong><span class="holes" aria-hidden="true"></span></div>
+    <div class="component nfc" [class.component-offline]="!nfcOnline()"><strong>PN532</strong><small>NFC reader</small></div>
+    <div class="component sensor" [class.component-offline]="!sensorOnline()"><strong>HC-SR04</strong><small>Clearance sensor</small><span class="eyes" aria-hidden="true">● ●</span></div>
+    <div class="component oled"><strong>OLED</strong><small>{{ machine().state.replaceAll('_', ' ') }}</small><span>{{ memberNames().join(' + ') || 'No active Member' }}</span></div>
+    <div class="led-bank" aria-label="Status lights">
+      <span class="led green" [class.on]="machine().state === 'AVAILABLE' && !disconnected('green-led') && !disconnected('power')"><b>G</b> Available</span>
+      <span class="led red" [class.on]="machine().state === 'OCCUPIED' && !disconnected('red-led') && !disconnected('power')"><b>R</b> Occupied</span>
+      <span class="led yellow" [class.on]="machine().state === 'SHARING_ALLOWED' && !disconnected('yellow-led') && !disconnected('power')"><b>Y</b> Sharing</span>
+      <span class="led orange" [class.on]="machine().state === 'CLEARANCE_WARNING' && !disconnected('power')"><b>O</b> Clearance warning</span>
+    </div>
+  </div>
+
+  <div class="hardware-actions">
+    <button type="button" (click)="finishPressed.emit()"><span aria-hidden="true">■</span> Finish button · GPIO 32</button>
+    <button type="button" (click)="sharingPressed.emit()"><span aria-hidden="true">⇄</span> Sharing button · GPIO 33</button>
+    <button type="button" [class.danger]="machine().safetyLocked" (click)="safetyChanged.emit(!machine().safetyLocked)">{{ machine().safetyLocked ? 'Clear safety lock' : 'Enable safety lock' }}</button>
+  </div>
+
+  <details open>
+    <summary>Interactive wires</summary>
+    <p>Click a wire to disconnect or reconnect it.</p>
+    <div class="wire-list">
+      @for (wire of wires; track wire) {
+        <button type="button" class="wire" [class.cut]="disconnected(wire)" [class.signal]="activeSignal() === wire || (wire === 'pn532' && activeSignal() === 'pn532')" (click)="wireToggled.emit(wire)">
+          <span class="wire-line" aria-hidden="true"></span>
+          <span>{{ wireLabels[wire] }}</span>
+          <strong>{{ disconnected(wire) ? 'Disconnected' : 'Connected' }}</strong>
+        </button>
+      }
+    </div>
+  </details>
+
+  <details>
+    <summary>Pin map</summary>
+    <div class="pin-map" role="list">
+      @for (connection of pinConnections; track connection[0]) {
+        <button type="button" role="listitem" (mouseenter)="selectedPin.set(connection[0])" (focus)="selectedPin.set(connection[0])" (click)="selectedPin.set(connection[0])">
+          <span>{{ connection[0] }}</span><strong>→ {{ connection[1] }}</strong>
+        </button>
+      }
+    </div>
+    @if (selectedPin(); as pin) { <p class="pin-selection" aria-live="polite">Selected pin: {{ pin }}</p> }
+  </details>
+
+  <details>
+    <summary>HC-SR04 voltage divider</summary>
+    <pre aria-label="HC-SR04 Echo voltage divider">HC-SR04 Echo
+      │
+     1 kΩ
+      │
+ESP32 GPIO 18
+      │
+     2 kΩ
+      │
+     GND</pre>
+  </details>
+</section>

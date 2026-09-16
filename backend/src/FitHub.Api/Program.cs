@@ -2,9 +2,11 @@ using FitHub.Infrastructure;
 using FitHub.Infrastructure.Persistence.Seeding;
 using FitHub.Api.Infrastructure;
 using FitHub.Api.Realtime;
+using FitHub.Api.Simulation;
 using FitHub.Application.Equipment;
 using FitHub.Infrastructure.Payments;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 
@@ -52,6 +54,20 @@ if (!builder.Environment.IsEnvironment("Testing"))
         .ValidateOnStart();
 }
 builder.Services.AddSignalR();
+builder.Services.AddOptions<SimulationOptions>()
+    .Bind(builder.Configuration.GetSection(SimulationOptions.SectionName))
+    .Validate(options => options.ClearanceThresholdMetres is > 0 and <= 10,
+        "Simulation:ClearanceThresholdMetres must be between 0 and 10 metres.")
+    .Validate(options => options.ClearanceSeconds is >= 1 and <= 60,
+        "Simulation:ClearanceSeconds must be between 1 and 60 seconds.")
+    .Validate(options => options.ParkingScanSeconds is >= 5 and <= 300,
+        "Simulation:ParkingScanSeconds must be between 5 and 300 seconds.")
+    .Validate(options => options.ParkingDemoScanSeconds is >= 1 and <= 30,
+        "Simulation:ParkingDemoScanSeconds must be between 1 and 30 seconds.")
+    .ValidateOnStart();
+builder.Services.AddSingleton<SimulationSessionService>();
+builder.Services.AddScoped<SimulationMemberCatalogService>();
+builder.Services.AddScoped<ConnectedEquipmentSimulationService>();
 builder.Services.AddScoped<IEquipmentRealtimeNotifier, SignalREquipmentNotifier>();
 builder.Services.AddScoped<FitHub.Application.Parking.IParkingRealtimeNotifier, SignalRParkingNotifier>();
 builder.Services.AddHostedService<EquipmentOfflineMonitor>();
@@ -73,6 +89,15 @@ builder.Services.AddRateLimiter(options =>
         {
             PermitLimit = 3,
             Window = TimeSpan.FromMinutes(10),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+    options.AddPolicy("simulation", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 180,
+            Window = TimeSpan.FromMinutes(1),
             QueueLimit = 0,
             AutoReplenishment = true
         }));
@@ -143,7 +168,12 @@ app.MapGet("/fault-images/{fileName}", (string fileName) =>
         };
         return Results.File(fullPath, contentType);
     })
-    .RequireAuthorization(FitHub.Application.Authentication.AuthorizationPolicies.ActiveMembership);
+    .RequireAuthorization(
+        new AuthorizeAttribute
+        {
+            Roles = $"{FitHub.Application.Authentication.AuthorizationPolicies.Member},{FitHub.Application.Authentication.AuthorizationPolicies.Administrator}"
+        },
+        new AuthorizeAttribute { Policy = FitHub.Application.Authentication.AuthorizationPolicies.ActiveMembership });
 app.MapGet("/health", () => Results.Ok(new { status = "Healthy" }))
     .WithName("Health")
     .WithTags("Health");

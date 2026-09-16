@@ -1,0 +1,9 @@
+<section [class.elevated]="elevated()">
+  @if (heading() || description()) {
+    <header>
+      @if (heading()) { <h2>{{ heading() }}</h2> }
+      @if (description()) { <p>{{ description() }}</p> }
+    </header>
+  }
+  <div class="card-content"><ng-content /></div>
+</section>

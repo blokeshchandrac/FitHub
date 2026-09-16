@@ -9,6 +9,7 @@ namespace FitHub.Api.Controllers;
 
 [ApiController]
 [Authorize(Policy = AuthorizationPolicies.ActiveMembership)]
+[Authorize(Policy = AuthorizationPolicies.Member)]
 [Route("api/workout-sessions")]
 public sealed class WorkoutSessionsController(IWorkoutService workoutService) : ControllerBase
 {

@@ -1,5 +1,5 @@
-<section class="auth-page">
-  <form class="auth-card" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+<section class="auth-page login-page">
+  <form class="auth-card login-card" [formGroup]="form" (ngSubmit)="submit()" novalidate>
     <p class="eyebrow">FitHub access</p>
     <h1>Sign in</h1>
     <p class="auth-intro">Use your FitHub account to continue.</p>
@@ -24,11 +24,5 @@
       <a routerLink="/forgot-password">Forgot password?</a>
       <a routerLink="/register">Create account</a>
     </div>
-    <aside class="demo-accounts" aria-label="Development demonstration accounts">
-      <strong>Demonstration accounts</strong>
-      <button type="button" (click)="form.controls.email.setValue('no-membership@fithub.demo')"><span>Member – No Membership</span><small>no-membership@fithub.demo</small></button>
-      <button type="button" (click)="form.controls.email.setValue('active-member@fithub.demo')"><span>Member – Active Membership</span><small>active-member@fithub.demo</small></button>
-      <p>Use the shared development password configured for this environment.</p>
-    </aside>
   </form>
 </section>

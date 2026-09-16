@@ -1,0 +1,163 @@
+:root,
+[data-theme='volt'] {
+  color-scheme: dark;
+
+  --color-page: #080b09;
+  --color-surface: #101411;
+  --color-surface-elevated: #171c18;
+  --color-surface-interactive: #1d241e;
+  --color-overlay: rgb(2 6 4 / 78%);
+  --color-text-primary: #f5f7f2;
+  --color-text-secondary: #c1c8bd;
+  --color-text-muted: #929b8e;
+  --color-border: #30382f;
+  --color-border-strong: #586455;
+  --color-accent: #c9ff4a;
+  --color-accent-hover: #dcff82;
+  --color-on-accent: #0b1007;
+  --color-accent-soft: #243216;
+  --color-focus-ring: #d7ff79;
+  --shadow-card: 0 0.75rem 2rem rgb(0 0 0 / 18%);
+  --shadow-elevated: 0 1.25rem 3rem rgb(0 0 0 / 28%);
+
+  // Theme-invariant semantic states.
+  --color-success: #4ade80;
+  --color-success-surface: #12321f;
+  --color-warning: #fbbf24;
+  --color-warning-surface: #38280a;
+  --color-error: #fb7185;
+  --color-error-surface: #3b141c;
+  --color-information: #60a5fa;
+  --color-information-surface: #102b4c;
+  --color-offline: #9ca3af;
+  --color-offline-surface: #25282d;
+  --color-maintenance: #60a5fa;
+
+  --font-family-body: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-family-display: var(--font-family-body);
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.375rem;
+  --font-size-2xl: clamp(1.75rem, 4vw, 2.5rem);
+  --line-height-tight: 1.18;
+  --line-height-body: 1.55;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  --radius-control: 0.625rem;
+  --radius-card: 0.875rem;
+  --radius-panel: 1.125rem;
+  --radius-pill: 999px;
+
+  --motion-fast: 120ms;
+  --motion-normal: 180ms;
+  --motion-slow: 220ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  --layer-base: 0;
+  --layer-sticky: 10;
+  --layer-navigation: 20;
+  --layer-popover: 30;
+  --layer-dialog: 40;
+  --layer-toast: 50;
+}
+
+[data-theme='pulse'] {
+  --color-page: #0e0910;
+  --color-surface: #171019;
+  --color-surface-elevated: #201522;
+  --color-surface-interactive: #291b2c;
+  --color-overlay: rgb(8 2 10 / 80%);
+  --color-text-primary: #fff6fb;
+  --color-text-secondary: #dbc4d3;
+  --color-text-muted: #ad91a4;
+  --color-border: #412d43;
+  --color-border-strong: #745375;
+  --color-accent: #ff5ba7;
+  --color-accent-hover: #ff82bc;
+  --color-on-accent: #190711;
+  --color-accent-soft: #3a1830;
+  --color-focus-ring: #c7a1ff;
+  --shadow-card: 0 0.75rem 2rem rgb(0 0 0 / 20%);
+  --shadow-elevated: 0 1.25rem 3rem rgb(0 0 0 / 30%);
+}
+
+[data-theme='ocean'] {
+  --color-page: #06101a;
+  --color-surface: #0c1825;
+  --color-surface-elevated: #122334;
+  --color-surface-interactive: #193047;
+  --color-overlay: rgb(1 7 14 / 80%);
+  --color-text-primary: #f2f9ff;
+  --color-text-secondary: #bfd3e3;
+  --color-text-muted: #8eabc1;
+  --color-border: #29435a;
+  --color-border-strong: #4c6f8b;
+  --color-accent: #35d7f4;
+  --color-accent-hover: #7ce8fa;
+  --color-on-accent: #031319;
+  --color-accent-soft: #123846;
+  --color-focus-ring: #8cecff;
+  --shadow-card: 0 0.75rem 2rem rgb(0 0 0 / 20%);
+  --shadow-elevated: 0 1.25rem 3rem rgb(0 0 0 / 30%);
+}
+
+[data-theme='high-contrast'] {
+  color-scheme: dark;
+  --color-page: #000;
+  --color-surface: #000;
+  --color-surface-elevated: #080808;
+  --color-surface-interactive: #111;
+  --color-overlay: rgb(0 0 0 / 92%);
+  --color-text-primary: #fff;
+  --color-text-secondary: #fff;
+  --color-text-muted: #e5e5e5;
+  --color-border: #fff;
+  --color-border-strong: #fff;
+  --color-accent: #ffef00;
+  --color-accent-hover: #fff56a;
+  --color-on-accent: #000;
+  --color-accent-soft: #242100;
+  --color-focus-ring: #00e5ff;
+  --shadow-card: none;
+  --shadow-elevated: none;
+}
+
+@media (forced-colors: active) {
+  :root,
+  [data-theme] {
+    --color-page: Canvas;
+    --color-surface: Canvas;
+    --color-surface-elevated: Canvas;
+    --color-surface-interactive: Canvas;
+    --color-text-primary: CanvasText;
+    --color-text-secondary: CanvasText;
+    --color-text-muted: GrayText;
+    --color-border: CanvasText;
+    --color-border-strong: CanvasText;
+    --color-accent: Highlight;
+    --color-accent-hover: Highlight;
+    --color-on-accent: HighlightText;
+    --color-accent-soft: Canvas;
+    --color-focus-ring: Highlight;
+    --color-success: CanvasText;
+    --color-warning: CanvasText;
+    --color-error: CanvasText;
+    --color-information: CanvasText;
+    --color-offline: GrayText;
+    --color-maintenance: CanvasText;
+    --shadow-card: none;
+    --shadow-elevated: none;
+  }
+}

@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Exercise, MemberSummary, WorkoutHistory, WorkoutSession, WorkoutSetCommand, WorkoutTemplate, WorkoutTemplateCommand } from './workout.models';
+import { AssignedMember, Exercise, WorkoutAssignment, WorkoutHistory, WorkoutSession, WorkoutSetCommand, WorkoutTemplate, WorkoutTemplateCommand } from './workout.models';
 
 @Injectable({ providedIn: 'root' })
 export class WorkoutService {
@@ -21,6 +21,12 @@ export class WorkoutService {
   getHistory(): Observable<WorkoutHistory[]> { return this.http.get<WorkoutHistory[]>('/api/workout-sessions'); }
   logExercise(sessionId: string, exerciseId: string, notes: string, sets: WorkoutSetCommand[]): Observable<WorkoutSession> { return this.http.put<WorkoutSession>(`/api/workout-sessions/${sessionId}/exercise`, { exerciseId, notes, sets }); }
   completeSession(sessionId: string, notes: string): Observable<WorkoutSession> { return this.http.post<WorkoutSession>(`/api/workout-sessions/${sessionId}/complete`, { notes }); }
-  getMembers(): Observable<MemberSummary[]> { return this.http.get<MemberSummary[]>('/api/trainer/workout-assignments/members'); }
-  assignTemplate(templateId: string, memberUserId: string): Observable<object> { return this.http.post('/api/trainer/workout-assignments', { templateId, memberUserId }); }
+  getTrainerMembers(): Observable<AssignedMember[]> { return this.http.get<AssignedMember[]>('/api/trainer/workout-assignments/members'); }
+  getTrainerPlans(): Observable<WorkoutTemplate[]> { return this.http.get<WorkoutTemplate[]>('/api/trainer/workout-plans'); }
+  getTrainerExercises(): Observable<Exercise[]> { return this.http.get<Exercise[]>('/api/trainer/workout-plans/exercises'); }
+  createTrainerPlan(command: WorkoutTemplateCommand): Observable<WorkoutTemplate> { return this.http.post<WorkoutTemplate>('/api/trainer/workout-plans', command); }
+  updateTrainerPlan(id: string, command: WorkoutTemplateCommand): Observable<WorkoutTemplate> { return this.http.put<WorkoutTemplate>(`/api/trainer/workout-plans/${id}`, command); }
+  getTrainerAssignments(): Observable<WorkoutAssignment[]> { return this.http.get<WorkoutAssignment[]>('/api/trainer/workout-assignments'); }
+  assignTemplate(templateId: string, memberUserId: string): Observable<WorkoutAssignment> { return this.http.post<WorkoutAssignment>('/api/trainer/workout-assignments', { templateId, memberUserId }); }
+  removeTrainerAssignment(id: string): Observable<void> { return this.http.delete<void>(`/api/trainer/workout-assignments/${id}`); }
 }

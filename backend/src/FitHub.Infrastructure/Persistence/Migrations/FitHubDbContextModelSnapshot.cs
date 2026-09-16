@@ -212,13 +212,32 @@ namespace FitHub.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("InstructorUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Location")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
+                    b.Property<string>("ReviewReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("StartsAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -228,6 +247,8 @@ namespace FitHub.Infrastructure.Persistence.Migrations
                     b.HasIndex("InstructorUserId");
 
                     b.HasIndex("StartsAt");
+
+                    b.HasIndex("Status", "StartsAt");
 
                     b.ToTable("ClassSchedules", t =>
                         {
@@ -705,12 +726,19 @@ namespace FitHub.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateOnly?>("DateOfBirth")
+                        .HasColumnType("date");
+
                     b.Property<string>("Email")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("ExperienceLevel")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
@@ -721,6 +749,10 @@ namespace FitHub.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
+
+                    b.Property<decimal?>("HeightCm")
+                        .HasPrecision(5, 1)
+                        .HasColumnType("numeric(5,1)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
@@ -744,6 +776,9 @@ namespace FitHub.Infrastructure.Persistence.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<bool>("OnboardingCompleted")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("PasswordHash")
                         .HasColumnType("text");
 
@@ -752,6 +787,16 @@ namespace FitHub.Infrastructure.Persistence.Migrations
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("boolean");
+
+                    b.Property<int>("PlannedTrainingDays")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("PreferredGymBranchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PreferredName")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text");
@@ -766,6 +811,10 @@ namespace FitHub.Infrastructure.Persistence.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<decimal?>("WeightKg")
+                        .HasPrecision(5, 1)
+                        .HasColumnType("numeric(5,1)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("IsActive");
@@ -777,7 +826,45 @@ namespace FitHub.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
 
+                    b.HasIndex("OnboardingCompleted");
+
+                    b.HasIndex("PreferredGymBranchId");
+
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("FitHub.Domain.Identity.GymBranch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("IsActive");
+
+                    b.ToTable("GymBranches");
                 });
 
             modelBuilder.Entity("FitHub.Domain.Identity.RefreshToken", b =>
@@ -827,6 +914,57 @@ namespace FitHub.Infrastructure.Persistence.Migrations
                     b.HasIndex("UserId", "ExpiresAt");
 
                     b.ToTable("RefreshTokens");
+                });
+
+            modelBuilder.Entity("FitHub.Domain.Identity.TrainerMemberAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AssignedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("AssignedByAdministratorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("MemberId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("TrainerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UnassignedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UnassignedByAdministratorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignedByAdministratorId");
+
+                    b.HasIndex("MemberId");
+
+                    b.HasIndex("TrainerId");
+
+                    b.HasIndex("UnassignedByAdministratorId");
+
+                    b.HasIndex("TrainerId", "MemberId")
+                        .IsUnique()
+                        .HasFilter("\"Status\" = 'Active'");
+
+                    b.ToTable("TrainerMemberAssignments");
                 });
 
             modelBuilder.Entity("FitHub.Domain.Memberships.Membership", b =>
@@ -967,8 +1105,8 @@ namespace FitHub.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("CurrentState")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
 
                     b.Property<bool>("IsAccessible")
                         .HasColumnType("boolean");
@@ -1027,8 +1165,8 @@ namespace FitHub.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("PreviousState")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
 
                     b.Property<string>("Reason")
                         .HasMaxLength(500)
@@ -1041,8 +1179,8 @@ namespace FitHub.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("State")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1054,6 +1192,76 @@ namespace FitHub.Infrastructure.Persistence.Migrations
                     b.HasIndex("ParkingSpaceId", "OccurredAt");
 
                     b.ToTable("ParkingStatusEvents");
+                });
+
+            modelBuilder.Entity("FitHub.Domain.Parking.ParkingViolationAlert", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AffectedSpaceCodes")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeduplicationKey")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<DateTimeOffset>("DetectedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("LastObservedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SimulationSessionId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("SourceDeviceId")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("VehicleSimulationId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("ViolationType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeduplicationKey")
+                        .IsUnique();
+
+                    b.HasIndex("SimulationSessionId");
+
+                    b.HasIndex("IsActive", "DetectedAt");
+
+                    b.ToTable("ParkingViolationAlerts");
                 });
 
             modelBuilder.Entity("FitHub.Domain.Payments.Payment", b =>
@@ -1077,6 +1285,9 @@ namespace FitHub.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<bool>("IsSeededDemo")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid?>("MembershipId")
                         .HasColumnType("uuid");
 
@@ -1095,10 +1306,21 @@ namespace FitHub.Infrastructure.Persistence.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
+                    b.Property<decimal>("RefundedAmount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<DateTimeOffset?>("RefundedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
+
+                    b.Property<string>("StripePaymentIntentId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1113,6 +1335,9 @@ namespace FitHub.Infrastructure.Persistence.Migrations
                     b.HasIndex("MembershipPlanId");
 
                     b.HasIndex("ProviderReference")
+                        .IsUnique();
+
+                    b.HasIndex("StripePaymentIntentId")
                         .IsUnique();
 
                     b.HasIndex("UserId", "CreatedAt");
@@ -1336,6 +1561,9 @@ namespace FitHub.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTimeOffset?>("EndedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
@@ -1418,6 +1646,11 @@ namespace FitHub.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsPublic")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -1432,6 +1665,8 @@ namespace FitHub.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("IsPublic");
+
+                    b.HasIndex("OwnerUserId", "Kind");
 
                     b.HasIndex("OwnerUserId", "Name");
 
@@ -1774,6 +2009,16 @@ namespace FitHub.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("FitHub.Domain.Identity.ApplicationUser", b =>
+                {
+                    b.HasOne("FitHub.Domain.Identity.GymBranch", "PreferredGymBranch")
+                        .WithMany()
+                        .HasForeignKey("PreferredGymBranchId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("PreferredGymBranch");
+                });
+
             modelBuilder.Entity("FitHub.Domain.Identity.RefreshToken", b =>
                 {
                     b.HasOne("FitHub.Domain.Identity.ApplicationUser", "User")
@@ -1783,6 +2028,40 @@ namespace FitHub.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FitHub.Domain.Identity.TrainerMemberAssignment", b =>
+                {
+                    b.HasOne("FitHub.Domain.Identity.ApplicationUser", "AssignedByAdministrator")
+                        .WithMany()
+                        .HasForeignKey("AssignedByAdministratorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FitHub.Domain.Identity.ApplicationUser", "Member")
+                        .WithMany()
+                        .HasForeignKey("MemberId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FitHub.Domain.Identity.ApplicationUser", "Trainer")
+                        .WithMany()
+                        .HasForeignKey("TrainerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FitHub.Domain.Identity.ApplicationUser", "UnassignedByAdministrator")
+                        .WithMany()
+                        .HasForeignKey("UnassignedByAdministratorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("AssignedByAdministrator");
+
+                    b.Navigation("Member");
+
+                    b.Navigation("Trainer");
+
+                    b.Navigation("UnassignedByAdministrator");
                 });
 
             modelBuilder.Entity("FitHub.Domain.Memberships.Membership", b =>
