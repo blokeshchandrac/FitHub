@@ -25,7 +25,10 @@ export class ScannerPage {
     if (this.token.invalid) { this.token.markAsTouched(); return; }
     this.message.set(null); this.error.set(null); this.validation.set(null);
     this.service.checkIn(this.token.value.trim()).subscribe({
-      next: (result) => { this.message.set(`Check-in accepted at ${new Date(result.checkedInAt).toLocaleString()}.`); this.token.setValue(''); },
+      next: (result) => {
+        this.message.set(`Check-in accepted at ${new Date(result.checkedInAt).toLocaleString()}.`);
+        this.token.reset('');
+      },
       error: (error: HttpErrorResponse) => this.error.set(error.error?.message ?? 'Check-in was rejected.'),
     });
   }
