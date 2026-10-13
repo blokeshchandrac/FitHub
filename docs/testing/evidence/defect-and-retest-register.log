@@ -1,0 +1,41 @@
+FitHub Phase 2 defect and retest register
+Date: 2026-09-17
+
+DEF-001 — Attendance scanner submit did not invoke check-in
+- Original result: clicking “Validate and check in QR” produced no request and no attendance row.
+- Cause: a plain standalone form used ngSubmit without the required form directive/import.
+- Affected file: frontend/fithub-web/src/app/features/attendance/scanner/scanner-page.html
+- Fix: use the native submit event, invoke scan(), and prevent the browser’s default submit.
+- Retest: PASS. Check-in accepted; token reuse rejected; attendance persisted.
+
+DEF-002 — Trainer assignment form did not invoke assignment
+- Original result: Administrator selection and submit produced no assignment.
+- Cause: the same plain-form ngSubmit wiring problem.
+- Affected file: frontend/fithub-web/src/app/features/administration/trainers/trainer-assignment-page.html
+- Fix: use the native submit event and prevent default submission.
+- Retest: PASS. Tariq→Elena assignment persisted and appeared for the Trainer.
+
+DEF-003 — Successful scanner check-in also displayed a required-field error
+- Original result: after success, clearing the text value left the control touched, so success and validation error appeared together.
+- Cause: setValue('') did not reset the control interaction state.
+- Affected file: frontend/fithub-web/src/app/features/attendance/scanner/scanner-page.ts
+- Fix: reset('') after successful check-in.
+- Retest: production build PASS; final browser-only visual retest remains outstanding.
+
+DEF-004 — Connected equipment clearance emits contradictory events
+- Original result: both shared Members leaving produced countdown start, backend-unavailable, immediate enter and cancellation events; automatic release did not complete.
+- Likely affected area: equipment simulation sensor-zone transition/reconciliation and connected event submission.
+- Status: OPEN. Not changed in this testing task because it requires a focused simulation fix.
+
+DEF-005 — Workout sets have no dedicated rest-time field
+- Original result: 90-second rest had to be written in exercise notes.
+- Affected area: workout set DTO, domain persistence and Angular session form.
+- Status: OPEN.
+
+DEF-006 — Notification preferences are absent
+- Original result: notifications and deduplication exist, but no preference persistence or interface exists.
+- Affected area: notification domain/API/frontend.
+- Status: OPEN.
+
+GAP-001 — Registration consent is absent from the public registration workflow.
+GAP-002 — Forgot-password does not deliver a single-use reset link; the generated token is discarded.

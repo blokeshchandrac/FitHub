@@ -1,0 +1,29 @@
+TC-06 manual evidence — Smart-equipment claim, sharing and clearance
+Date: 2026-09-17
+
+Administrator: phase2.manual-admin@fithub.test
+Route: /simulation/equipment
+Machine: EQ-TREADMILL-01 mapped to persisted TREAD-001 (Treadmill)
+Members: Elena Martinez, Priya Testmember, and a third active development Member
+
+Observed successful workflow:
+- Connected Mode reported API connected and EquipmentHub connected.
+- Four virtual machines mapped to persisted equipment records.
+- Eight development Members loaded.
+- Elena entered, took her session NFC card and claimed Treadmill.
+- Persisted state became Occupied with Elena as owner.
+- Elena enabled sharing; persisted state became SharingAllowed.
+- Priya joined as the one sharing partner.
+- A third Member was rejected with SHARING_FULL.
+- Administrator equipment history displayed claim, sharing enabled and partner joined events.
+- Connected reset restored TREAD-001 to Available in PostgreSQL.
+
+Failed clearance workflow:
+- One shared Member leaving did not initially start clearance, as expected.
+- When the second Member left, the event history emitted SENSOR_ZONE_EXITED and CLEARANCE_COUNTDOWN_STARTED, followed by BACKEND_UNAVAILABLE, SENSOR_ZONE_ENTERED and CLEARANCE_COUNTDOWN_CANCELLED in the same transition window.
+- The machine remained SharingAllowed; a stable 30-second automatic release could not be demonstrated.
+- Similar duplicate enter/start/cancel events were visible in the same event history.
+
+Decision: FAIL
+Reason: FR-21 and most of FR-22 were demonstrated, but FR-23 did not complete reliably and FR-24 produced contradictory connected events.
+Defect: DEF-004 open.

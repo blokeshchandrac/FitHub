@@ -1,0 +1,34 @@
+TC-05 manual evidence — Dashboard metrics and rule-based guidance
+Date: 2026-09-17
+
+Member: phase2.registration.20260916@fithub.test
+Planned days: Monday, Wednesday, Friday
+Goal: Strength
+Experience: Beginner
+
+Before attendance/workout evidence:
+- Recommendation response displayed “Not enough data”.
+- Reason identified the missing attendance history.
+
+After TC-03 and TC-04 data existed:
+- Attendance frequency: 0.2 visits/week
+- Workout frequency: 0.2 workouts/week
+- Weekly volume: 2,450 kg
+- Current streak: 1 week
+- Consistency: 12.5%
+- Membership visits: 1
+- Cost per visit: EUR 29.90
+- Latest weight: 64 kg
+- Personal records: Back Squat 65 kg; Bench Press 42.5 kg
+
+Rules displayed:
+- Recovery is today’s plan because a workout was already completed today.
+- Activity occurred on 0 of 12 planned days over the preceding 28 days.
+- Conservative Back Squat target: 64 kg.
+- Conservative Bench Press target: 43.5 kg.
+- Wednesday planned day was identified as missed.
+- Muscle groups to revisit: Back, Shoulders, Arms, Core.
+- General estimate: 2,110 kcal, 102 g protein, 51 g fat, 311 g carbohydrate, with a non-medical disclaimer.
+
+Decision: PASS
+Defect reference: none.

@@ -1,0 +1,21 @@
+TC-08 manual evidence — Parking observations and uncertainty
+Date: 2026-09-17
+
+Administrator: phase2.manual-admin@fithub.test
+Route: /simulation/parking
+Camera: SIM-PARK-CAMERA-01
+Spaces: P-A1..P-A4, P-B1..P-B4, P-C1..P-C4
+
+Observed:
+- Connected Mode reported API verified and ParkingHub connected.
+- Baseline Scan Now persisted 12 observations at 0.98 confidence; all 12 simulation spaces were Available.
+- The Member parking page received the persisted values and displayed them without a manual data edit.
+- Camera Offline followed by Scan Now persisted all 12 monitored spaces as Unknown and logged CAMERA_OFFLINE.
+- Camera Online with low-confidence/obstructed view kept all 12 as Unknown and stated that confidence was below threshold instead of guessing.
+- Clearing low confidence and scanning restored all 12 simulation spaces to Available at 0.98 confidence.
+- PostgreSQL source for all 12 was SIM-PARK-CAMERA-01.
+- The Member overview contained 15 total records because three pre-existing seed spaces (A-01, A-02, B-01) coexist with the 12 simulation spaces.
+
+Decision: PASS for FR-29 and FR-30.
+Limitation: the two-space vehicle alert scenario was not repeated during this evidence pass; connected persistence, uncertainty and Member visibility were executed.
+Defect reference: none.

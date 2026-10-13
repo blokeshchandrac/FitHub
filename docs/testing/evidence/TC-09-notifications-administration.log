@@ -1,0 +1,25 @@
+TC-09 manual evidence — Notifications and administration
+Date: 2026-09-17
+
+Administrator: phase2.manual-admin@fithub.test
+Member: phase2.registration.20260916@fithub.test
+
+Observed administration:
+- Administrator dashboard displayed active members, active memberships, confirmed net revenue, payments today/month, trainer count, open faults, attendance trend, parking totals and equipment utilization.
+- User management supported role/status search and account details.
+- Administrator assigned Elena to Tariq; the active assignment retained who assigned it and when.
+- The Trainer subsequently saw only the assigned Member.
+
+Observed Member notifications:
+- Personal record: New recorded best for Back Squat: 65 kg.
+- Personal record: New recorded best for Bench Press: 42.5 kg.
+- Fault report updated: Your report for Treadmill is now UnderReview.
+- Each notification had a stable deduplication key in PostgreSQL.
+
+Missing behaviour:
+- No persisted notification-preference model/table or Member preference interface was found.
+- Therefore notifications cannot be demonstrated as being sent according to the Member’s preferences, as required by FR-33.
+
+Decision: FAIL
+Reason: FR-35 and FR-36 were demonstrated, and deduplicated notifications exist, but FR-33 is only partial without preferences.
+Defect: DEF-006 open.

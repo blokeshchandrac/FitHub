@@ -1,0 +1,20 @@
+FitHub Phase 2 manual test startup evidence
+Date: 2026-09-17 (Europe/Berlin)
+
+Command executed:
+docker compose --env-file .env up -d --build
+
+Observed services:
+- fithub-frontend-1: running, http://localhost:4040/
+- fithub-api-1: running, http://localhost:8080/
+- fithub-postgres-1: running and healthy, localhost:5432
+- API health check: http://localhost:8080/health returned a successful response
+
+The equipment and parking simulators are Angular routes backed by the same API; they are not separate containers.
+The frontend container build used Node 22.22.3, matching .nvmrc.
+
+Build note:
+The production Angular build completed. Existing simulator stylesheet-budget warnings remained; no budget was changed.
+
+Security note:
+.env is ignored. No password, Stripe secret, raw NFC UID, access token, refresh token, or device credential is recorded in this evidence.

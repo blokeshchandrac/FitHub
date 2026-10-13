@@ -1,0 +1,41 @@
+TC-04 manual evidence — Plans, workout logging and progress
+Date: 2026-09-17
+
+Member: phase2.registration.20260916@fithub.test
+Trainer: phase2.manual-trainer@fithub.test
+
+Personal template:
+- Name: Phase 2 Strength A
+- Description: Manual acceptance workout: squat and bench progression.
+- Exercises: Back Squat; Bench Press
+
+Completed workout:
+- Back Squat: 8 x 60 kg / 45 s; 8 x 62.5 kg / 45 s; 6 x 65 kg / 50 s
+- Exercise note: Controlled depth; 90-second rest between sets.
+- Bench Press: 10 x 40 kg / 40 s; 8 x 42.5 kg / 45 s; 8 x 42.5 kg / 45 s
+- Exercise note: Paused repetitions; 90-second rest used but recorded only in notes.
+- Session note: Phase 2 manual workout completed without pain.
+- Persisted volume: 2,450.00 kg
+- Status: Completed
+
+Body measurement:
+- 64 kg, 168 cm, 22.5% body fat, chest 90 cm, waist 72 cm, hip 96 cm
+- Note: Phase 2 baseline measurement.
+- UI BMI: 22.7
+
+Trainer plan:
+- Elena Strength Progression
+- Three-week conservative squat and bench plan for the assigned Member.
+- Owner: phase2.manual-trainer@fithub.test
+- Assigned Member: phase2.registration.20260916@fithub.test
+- Assignment status: Active
+
+Observed:
+- Personal and Trainer-owned plans remained separate.
+- Completed history and prior set performance were visible.
+- Personal records displayed Back Squat 65 kg and Bench Press 42.5 kg.
+- There is no dedicated per-set rest-time field; rest time could only be written in a free-text note.
+
+Decision: FAIL
+Reason: FR-12, FR-14, FR-15 and FR-16 workflows worked, but FR-13 explicitly requires rest time as workout data.
+Defect: DEF-005 open.
