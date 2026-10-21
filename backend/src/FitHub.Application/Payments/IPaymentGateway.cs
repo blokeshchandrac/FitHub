@@ -18,6 +18,13 @@ public sealed record PaymentCheckoutRequest(
     decimal Amount,
     string Currency);
 public sealed record PaymentCheckoutResult(string SessionId, string CheckoutUrl);
+
+public static class PaymentAmount
+{
+    public static long ToMinorUnits(decimal amount) =>
+        checked((long)(decimal.Round(amount, 2, MidpointRounding.AwayFromZero) * 100m));
+}
+
 public sealed record PaymentWebhookNotification(
     string EventId,
     string EventType,

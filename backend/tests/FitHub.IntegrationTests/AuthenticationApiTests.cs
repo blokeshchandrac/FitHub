@@ -73,7 +73,7 @@ public sealed class AuthenticationApiTests : IAsyncLifetime
 
         var member = await scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>()
             .FindByEmailAsync("member.auth@fithub.test");
-        var plan = new MembershipPlan { Name = "Authentication test plan", Price = 20m, BillingPeriodMonths = 1 };
+        var plan = new MembershipPlan { Name = "Monthly", Price = 29.90m, BillingPeriodMonths = 1 };
         var membership = new Membership(member!.Id, plan.Id, DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(30));
         membership.Activate(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(30));
         var expiredUser = await scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>().FindByEmailAsync("expired.auth@fithub.test");
@@ -93,7 +93,7 @@ public sealed class AuthenticationApiTests : IAsyncLifetime
     public async Task RegistrationSucceedsAndDuplicateRegistrationFailsSafely()
     {
         using var client = CreateClient();
-        var request = new { email = "new.member@fithub.test", firstName = "New", lastName = "Member", password = ValidPassword };
+        var request = new { email = "new.member@fithub.test", firstName = "New", lastName = "Member", password = ValidPassword, consentAccepted = true };
 
         using var successfulResponse = await client.PostAsJsonAsync("/api/auth/register", request);
         using var duplicateResponse = await client.PostAsJsonAsync("/api/auth/register", request);
@@ -102,6 +102,39 @@ public sealed class AuthenticationApiTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, successfulResponse.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, duplicateResponse.StatusCode);
         Assert.DoesNotContain("exists", duplicateBody, StringComparison.OrdinalIgnoreCase);
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var stored = await scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>()
+            .FindByEmailAsync(request.email);
+        Assert.NotNull(stored!.ConsentAcceptedAtUtc);
+        Assert.Equal(RegistrationConsent.CurrentVersion, stored.ConsentVersion);
+    }
+
+    [Fact]
+    public async Task RegistrationRequiresExplicitConsent()
+    {
+        using var client = CreateClient();
+
+        using var missing = await client.PostAsJsonAsync("/api/auth/register", new
+        {
+            email = "missing-consent@fithub.test",
+            firstName = "Missing",
+            lastName = "Consent",
+            password = ValidPassword
+        });
+        using var rejected = await client.PostAsJsonAsync("/api/auth/register", new
+        {
+            email = "false-consent@fithub.test",
+            firstName = "False",
+            lastName = "Consent",
+            password = ValidPassword,
+            consentAccepted = false
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, missing.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+        Assert.Contains("ConsentAccepted", await missing.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ConsentAccepted", await rejected.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -169,7 +202,8 @@ public sealed class AuthenticationApiTests : IAsyncLifetime
             email = "not-an-email",
             firstName = "",
             lastName = "Member",
-            password = "weak"
+            password = "weak",
+            consentAccepted = true
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -292,7 +326,8 @@ public sealed class AuthenticationApiTests : IAsyncLifetime
             email,
             firstName = "New",
             lastName = "Member",
-            password = ValidPassword
+            password = ValidPassword,
+            consentAccepted = true
         });
         registration.EnsureSuccessStatusCode();
         var auth = await registration.Content.ReadFromJsonAsync<AuthenticationPayload>();
@@ -464,7 +499,8 @@ public sealed class AuthenticationApiTests : IAsyncLifetime
         Assert.Equal(MembershipPurchaseKind.Purchase, gatewayRequest.PurchaseKind);
         Assert.Equal("no-membership.auth@fithub.test", gatewayRequest.CustomerEmail);
         Assert.Equal("EUR", gatewayRequest.Currency);
-        Assert.Equal(plan.Price, gatewayRequest.Amount);
+        Assert.Equal(29.90m, gatewayRequest.Amount);
+        Assert.Equal(2990, PaymentAmount.ToMinorUnits(gatewayRequest.Amount));
     }
 
     [Fact]
@@ -552,6 +588,11 @@ public sealed class AuthenticationApiTests : IAsyncLifetime
         Assert.Equal(0, await db.Memberships.CountAsync(item => item.UserId == inactive!.Id));
         Assert.Equal(1, await db.Memberships.CountAsync(item => item.UserId == active!.Id));
         Assert.Equal(1, await db.Payments.CountAsync(item => item.UserId == active!.Id && item.Status == PaymentStatus.Succeeded));
+        var monthly = await db.MembershipPlans.SingleAsync(item => item.Name == "Monthly");
+        Assert.Equal(29.90m, monthly.Price);
+        Assert.Equal(1, monthly.BillingPeriodMonths);
+        var payment = await db.Payments.SingleAsync(item => item.UserId == active.Id && item.Status == PaymentStatus.Succeeded);
+        Assert.Equal(29.90m, payment.Amount);
     }
 
     private HttpClient CreateClient() => _factory.CreateClient(new WebApplicationFactoryClientOptions

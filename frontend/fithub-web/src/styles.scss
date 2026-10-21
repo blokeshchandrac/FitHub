@@ -125,13 +125,20 @@ th { color: #475569; font-size: .8rem; text-transform: uppercase; }
 .filter-row { align-items: end; display: grid; gap: .75rem; grid-template-columns: 2fr 1fr 1fr auto; margin-bottom: 1.25rem; }
 .filter-row input, select { border: 1px solid #cbd5e1; border-radius: .55rem; padding: .75rem; }
 .checkbox-row { align-items: center; display: flex; gap: .65rem; }
+.auth-card .checkbox-row input[type='checkbox'] { flex: 0 0 auto; inline-size: 1.15rem; margin: 0; width: auto; }
 .selection-grid { display: grid; gap: .65rem; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); }
 .select-card { align-items: start; border: 1px solid #cbd5e1; border-radius: .65rem; cursor: pointer; display: flex; gap: .7rem; padding: .75rem; }
 .select-card.selected { background: #ecfdf5; border-color: #10b981; }
 .select-card span { display: grid; gap: .2rem; }.select-card small { color: #64748b; }
 .workout-layout { align-items: start; display: grid; gap: 1.25rem; grid-template-columns: 1fr minmax(18rem, 25rem); }
 .workout-entry { position: sticky; top: 5.5rem; }
-.set-entry { display: grid; gap: .5rem; grid-template-columns: repeat(3, 1fr); }.set-entry button { grid-column: 1 / -1; }
+.set-entry { display: grid; gap: .5rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }.set-entry button { grid-column: 1 / -1; }
+.legal-page { margin: 0 auto; max-width: 52rem; padding: clamp(2rem, 6vw, 5rem) 1rem; }
+.legal-page article { display: grid; gap: 1rem; }
+.legal-page h1, .legal-page h2, .legal-page p { margin: 0; }
+.legal-page h2 { font-size: 1.2rem; margin-top: 1rem; }
+.legal-page p { color: #475569; line-height: 1.65; }
+.legal-page a { color: #047857; }
 .set-list { margin: 0; padding-left: 1.4rem; }.set-list li { margin-bottom: .4rem; }.set-list button { background: none; border: 0; color: #b91c1c; cursor: pointer; }
 .previous-performance { background: #f8fafc; border-radius: .5rem; color: #475569; font-size: .9rem; padding: .65rem; }
 .pr-row { background: #fffbeb; }.pr-row span { background: #f59e0b; border-radius: .3rem; color: #fff; font-size: .65rem; font-weight: 900; padding: .15rem .3rem; }

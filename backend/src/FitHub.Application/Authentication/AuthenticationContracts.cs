@@ -1,6 +1,11 @@
 namespace FitHub.Application.Authentication;
 
-public sealed record RegisterCommand(string Email, string Password, string FirstName, string LastName);
+public static class RegistrationConsent
+{
+    public const string CurrentVersion = "1.0";
+}
+
+public sealed record RegisterCommand(string Email, string Password, string FirstName, string LastName, bool ConsentAccepted);
 
 public sealed record LoginCommand(string Email, string Password);
 

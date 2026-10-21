@@ -18,6 +18,12 @@ internal sealed class IdentityAuthenticationService(
         string? ipAddress,
         CancellationToken cancellationToken = default)
     {
+        if (!command.ConsentAccepted)
+        {
+            await AuditAsync("RegistrationRejected", null, ipAddress, "Registration consent was not accepted.", cancellationToken);
+            return AuthenticationResult.Failed();
+        }
+
         if (await userManager.FindByEmailAsync(command.Email) is not null)
         {
             await AuditAsync("RegistrationRejected", null, ipAddress, "Registration could not be completed.", cancellationToken);
@@ -33,6 +39,7 @@ internal sealed class IdentityAuthenticationService(
             LastName = command.LastName.Trim(),
             IsActive = true
         };
+        user.RecordRegistrationConsent(timeProvider.GetUtcNow(), RegistrationConsent.CurrentVersion);
         var createResult = await userManager.CreateAsync(user, command.Password);
         if (!createResult.Succeeded)
         {

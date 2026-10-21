@@ -32,6 +32,7 @@ export class RegistrationPage {
       Validators.pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/),
     ] }),
     confirmPassword: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    consentAccepted: new FormControl(false, { nonNullable: true, validators: [Validators.requiredTrue] }),
   }, { validators: matchingPasswords });
 
   protected submit(): void {

@@ -58,8 +58,9 @@ public sealed class Stage5WorkoutProgressTests : IAsyncLifetime
         var template = await workouts.CreateTemplateAsync(user.Id, new UpsertWorkoutTemplateCommand("Strength", null, false, [exercise.Id]));
         var session = await workouts.StartSessionAsync(user.Id, template.Id);
         session = (await workouts.LogExerciseAsync(user.Id, session.Id, new LogExerciseCommand(exercise.Id, null,
-            [new WorkoutSetCommand(10, 50m, null), new WorkoutSetCommand(8, 60m, null)])))!;
+            [new WorkoutSetCommand(10, 50m, 45, 90), new WorkoutSetCommand(8, 60m, null, null)])))!;
         var completed = await workouts.CompleteSessionAsync(user.Id, session.Id, null);
+        var persisted = await workouts.GetSessionAsync(user.Id, session.Id);
         var nextSession = await workouts.StartSessionAsync(user.Id, template.Id);
 
         var progress = services.GetRequiredService<IProgressService>();
@@ -68,6 +69,12 @@ public sealed class Stage5WorkoutProgressTests : IAsyncLifetime
         var dashboard = await services.GetRequiredService<IDashboardService>().GetDashboardAsync(user.Id);
 
         Assert.Equal(980m, completed!.Volume);
+        var firstSet = Assert.IsType<WorkoutSetDto>(persisted!.Exercises.Single().Sets.First());
+        Assert.Equal(45, firstSet.DurationSeconds);
+        Assert.Equal(90, firstSet.RestSeconds);
+        Assert.Equal(500m, firstSet.Volume);
+        var storedSet = await dbContext.SetLogs.AsNoTracking().SingleAsync(item => item.Id == firstSet.Id);
+        Assert.Equal(90, storedSet.RestSeconds);
         Assert.Equal(60m, nextSession.Exercises.Single().PreviousPerformance!.BestWeightKg);
         Assert.Equal(25m, bodyProgress.Bmi);
         Assert.Equal(980m, dashboard.WeeklyVolume);

@@ -26,6 +26,14 @@
     <input id="confirm-password" type="password" formControlName="confirmPassword" autocomplete="new-password" />
     @if (form.controls.confirmPassword.touched && form.hasError('passwordMismatch')) { <p class="field-error">Passwords do not match.</p> }
 
+    <label class="checkbox-row" for="registration-consent">
+      <input id="registration-consent" type="checkbox" formControlName="consentAccepted" />
+      <span>I agree to the FitHub <a routerLink="/terms">Terms of Use</a> and acknowledge the <a routerLink="/privacy">Privacy Notice</a>.</span>
+    </label>
+    @if (form.controls.consentAccepted.touched && form.controls.consentAccepted.invalid) {
+      <p class="field-error">You must accept the Terms of Use and acknowledge the Privacy Notice to register.</p>
+    }
+
     @if (apiError()) { <div class="api-error" role="alert">{{ apiError() }}</div> }
     <button class="primary-button" type="submit" [disabled]="submitting()">{{ submitting() ? 'Creating account…' : 'Create account' }}</button>
     <div class="auth-links"><a routerLink="/login">Already have an account?</a></div>

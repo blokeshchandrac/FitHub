@@ -723,6 +723,13 @@ namespace FitHub.Infrastructure.Persistence.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("text");
 
+                    b.Property<DateTimeOffset?>("ConsentAcceptedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ConsentVersion")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1532,6 +1539,9 @@ namespace FitHub.Infrastructure.Persistence.Migrations
                     b.Property<int?>("Repetitions")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("RestSeconds")
+                        .HasColumnType("integer");
+
                     b.Property<int>("SetNumber")
                         .HasColumnType("integer");
 
@@ -1547,7 +1557,10 @@ namespace FitHub.Infrastructure.Persistence.Migrations
                     b.HasIndex("ExerciseLogId", "SetNumber")
                         .IsUnique();
 
-                    b.ToTable("SetLogs");
+                    b.ToTable("SetLogs", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_SetLogs_RestSeconds", "\"RestSeconds\" IS NULL OR (\"RestSeconds\" >= 0 AND \"RestSeconds\" <= 3600)");
+                        });
                 });
 
             modelBuilder.Entity("FitHub.Domain.Workouts.WorkoutPlanAssignment", b =>

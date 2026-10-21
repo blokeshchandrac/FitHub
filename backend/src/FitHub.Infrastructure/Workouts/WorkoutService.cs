@@ -114,7 +114,7 @@ internal sealed class WorkoutService(
         log.Notes = string.IsNullOrWhiteSpace(command.Notes) ? null : command.Notes.Trim();
         var setNumber = 1;
         foreach (var set in command.Sets)
-            log.Sets.Add(new SetLog { SetNumber = setNumber++, Repetitions = set.Repetitions, WeightKg = set.WeightKg, DurationSeconds = set.DurationSeconds });
+            log.Sets.Add(new SetLog { SetNumber = setNumber++, Repetitions = set.Repetitions, WeightKg = set.WeightKg, DurationSeconds = set.DurationSeconds, RestSeconds = set.RestSeconds });
         await dbContext.SaveChangesAsync(cancellationToken);
         return await GetSessionAsync(userId, sessionId, cancellationToken);
     }
@@ -246,7 +246,7 @@ internal sealed class WorkoutService(
                 .Select(set => set.WeightKg!.Value).ToListAsync(cancellationToken);
             decimal? previousBest = priorWeights.Count == 0 ? null : priorWeights.Max();
             var sets = log.Sets.OrderBy(item => item.SetNumber).Select(set => new WorkoutSetDto(
-                set.Id, set.SetNumber, set.Repetitions, set.WeightKg, set.DurationSeconds, set.Volume,
+                set.Id, set.SetNumber, set.Repetitions, set.WeightKg, set.DurationSeconds, set.RestSeconds, set.Volume,
                 set.WeightKg is not null && AnalyticsRules.IsPersonalRecord(set.WeightKg.Value, previousBest))).ToList();
             var previousDto = previous is null ? null : new PreviousPerformanceDto(
                 previous.WorkoutSession.EndedAt ?? previous.WorkoutSession.StartedAt,

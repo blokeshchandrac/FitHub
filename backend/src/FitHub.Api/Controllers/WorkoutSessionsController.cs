@@ -29,7 +29,7 @@ public sealed class WorkoutSessionsController(IWorkoutService workoutService) : 
     [HttpPut("{sessionId:guid}/exercise")]
     public async Task<ActionResult<WorkoutSessionDto>> LogExercise(Guid sessionId, LogExerciseRequest request, CancellationToken cancellationToken)
     {
-        var command = new LogExerciseCommand(request.ExerciseId, request.Notes, request.Sets.Select(set => new WorkoutSetCommand(set.Repetitions, set.WeightKg, set.DurationSeconds)).ToList());
+        var command = new LogExerciseCommand(request.ExerciseId, request.Notes, request.Sets.Select(set => new WorkoutSetCommand(set.Repetitions, set.WeightKg, set.DurationSeconds, set.RestSeconds)).ToList());
         var result = await workoutService.LogExerciseAsync(User.GetRequiredUserId(), sessionId, command, cancellationToken);
         return result is null ? NotFound() : Ok(result);
     }

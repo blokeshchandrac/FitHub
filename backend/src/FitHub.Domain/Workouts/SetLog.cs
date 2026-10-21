@@ -10,5 +10,6 @@ public sealed class SetLog : Entity
     public int? Repetitions { get; set; }
     public decimal? WeightKg { get; set; }
     public int? DurationSeconds { get; set; }
+    public int? RestSeconds { get; set; }
     public decimal Volume => (Repetitions ?? 0) * (WeightKg ?? 0m);
 }

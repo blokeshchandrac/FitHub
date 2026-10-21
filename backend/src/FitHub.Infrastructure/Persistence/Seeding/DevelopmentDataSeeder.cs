@@ -4,6 +4,7 @@ using FitHub.Domain.Memberships;
 using FitHub.Domain.Parking;
 using FitHub.Domain.Payments;
 using FitHub.Domain.Workouts;
+using FitHub.Application.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -94,12 +95,22 @@ public sealed class DevelopmentDataSeeder(
             EnsureSucceeded(await userManager.AddToRoleAsync(user, role), $"assign role '{role}' to '{email}'");
         }
 
+        var updateRequired = false;
+        if (role == "Member" && (user.ConsentAcceptedAtUtc is null || user.ConsentVersion is null))
+        {
+            user.RecordRegistrationConsent(DateTimeOffset.UtcNow, RegistrationConsent.CurrentVersion);
+            updateRequired = true;
+        }
+
         if (!user.OnboardingCompleted || user.ExperienceLevel is null
             || user.PlannedTrainingDays == TrainingDaySchedule.None || user.PreferredGymBranchId is null)
         {
             user.MarkOnboardingCompleteForSeed(developmentBranchId, DateTimeOffset.UtcNow);
-            EnsureSucceeded(await userManager.UpdateAsync(user), $"complete demo profile for '{email}'");
+            updateRequired = true;
         }
+
+        if (updateRequired)
+            EnsureSucceeded(await userManager.UpdateAsync(user), $"update demo account '{email}'");
     }
 
     private async Task<Guid> SeedDevelopmentBranchAsync(CancellationToken cancellationToken)
@@ -117,11 +128,14 @@ public sealed class DevelopmentDataSeeder(
 
     private async Task SeedMembershipPlansAsync(CancellationToken cancellationToken)
     {
-        if (await dbContext.MembershipPlans.AnyAsync(cancellationToken)) return;
+        var monthly = await dbContext.MembershipPlans.SingleOrDefaultAsync(plan => plan.Name == "Monthly", cancellationToken);
+        if (monthly is null)
+            dbContext.MembershipPlans.Add(new MembershipPlan { Name = "Monthly", Description = "Flexible monthly membership", Price = 29.90m, BillingPeriodMonths = 1 });
+        else if (monthly.Description == "Flexible monthly membership" && monthly.BillingPeriodMonths == 1 && monthly.Price == 49.90m)
+            monthly.Update("Monthly", monthly.Description, 29.90m, 1);
 
-        dbContext.MembershipPlans.AddRange(
-            new MembershipPlan { Name = "Monthly", Description = "Flexible monthly membership", Price = 49.90m, BillingPeriodMonths = 1 },
-            new MembershipPlan { Name = "Annual", Description = "Twelve-month membership", Price = 499.00m, BillingPeriodMonths = 12 });
+        if (!await dbContext.MembershipPlans.AnyAsync(plan => plan.Name == "Annual", cancellationToken))
+            dbContext.MembershipPlans.Add(new MembershipPlan { Name = "Annual", Description = "Twelve-month membership", Price = 499.00m, BillingPeriodMonths = 12 });
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
@@ -130,7 +144,7 @@ public sealed class DevelopmentDataSeeder(
         var accounts = configuration.GetSection("SeedData:Accounts").Get<DemoAccountOptions[]>() ?? [];
         var activeAccounts = accounts.Where(account =>
             account.Role == "Member" && account.MembershipState == "Active");
-        var plan = await dbContext.MembershipPlans.OrderBy(item => item.Price).FirstOrDefaultAsync(cancellationToken);
+        var plan = await dbContext.MembershipPlans.SingleOrDefaultAsync(item => item.Name == "Monthly", cancellationToken);
         if (plan is null) return;
 
         foreach (var account in activeAccounts)

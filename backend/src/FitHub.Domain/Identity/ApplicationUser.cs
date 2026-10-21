@@ -18,11 +18,23 @@ public sealed class ApplicationUser : IdentityUser<Guid>
     public TrainingDaySchedule PlannedTrainingDays { get; private set; } = TrainingDaySchedule.None;
     public Guid? PreferredGymBranchId { get; private set; }
     public GymBranch? PreferredGymBranch { get; private set; }
+    public DateTimeOffset? ConsentAcceptedAtUtc { get; private set; }
+    public string? ConsentVersion { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; private set; } = DateTimeOffset.UtcNow;
 
     public void MarkUpdated(DateTimeOffset timestamp) => UpdatedAt = timestamp;
     public void UpdateRecommendationPreferences(FitnessGoal goal, ActivityLevel activityLevel, DateTimeOffset timestamp){FitnessGoal=goal;ActivityLevel=activityLevel;MarkUpdated(timestamp);}
+
+    public void RecordRegistrationConsent(DateTimeOffset acceptedAtUtc, string consentVersion)
+    {
+        if (string.IsNullOrWhiteSpace(consentVersion))
+            throw new ArgumentException("Consent version is required.", nameof(consentVersion));
+
+        ConsentAcceptedAtUtc = acceptedAtUtc;
+        ConsentVersion = consentVersion.Trim();
+        MarkUpdated(acceptedAtUtc);
+    }
 
     public void UpdateProfile(
         string preferredName,

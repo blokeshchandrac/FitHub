@@ -23,8 +23,15 @@ public sealed class AuthenticationController(
         RegisterRequest request,
         CancellationToken cancellationToken)
     {
+        if (!request.ConsentAccepted)
+        {
+            ModelState.AddModelError(nameof(request.ConsentAccepted),
+                "You must accept the FitHub Terms of Use and acknowledge the Privacy Notice.");
+            return ValidationProblem(ModelState);
+        }
+
         var result = await authenticationService.RegisterAsync(
-            new RegisterCommand(request.Email, request.Password, request.FirstName, request.LastName),
+            new RegisterCommand(request.Email, request.Password, request.FirstName, request.LastName, request.ConsentAccepted),
             GetIpAddress(),
             cancellationToken);
         if (!result.Succeeded || result.Tokens is null)

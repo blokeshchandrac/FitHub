@@ -21,4 +21,5 @@ export interface LoginRequest {
 export interface RegistrationRequest extends LoginRequest {
   readonly firstName: string;
   readonly lastName: string;
+  readonly consentAccepted: boolean;
 }
