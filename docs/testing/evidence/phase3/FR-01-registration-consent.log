@@ -13,9 +13,10 @@ Actual result
 - Browser: leaving consent false displayed “You must accept the Terms of Use and acknowledge the Privacy Notice to register” and the form remained on /register without creating an account.
 - Browser: /terms and /privacy loaded the academic-demonstration notices.
 - API/PostgreSQL: synthetic registration persisted ConsentAcceptedAtUtc and ConsentVersion=1.0. The backend generated both values.
+- Existing development database query: ConsentVersion returned 1.0 and ConsentAcceptedAtUtc IS NOT NULL returned true for the synthetic account.
 - Automated verification: AuthenticationApiTests covered missing consent, false consent, successful true consent, stored timestamp/version, and unchanged duplicate-email protection.
 - Angular verification: registration tests covered requiredTrue, default false, request mapping, and the Terms/Privacy routes.
 
 Decision: PASSED for implementation. The final account-creation click was not repeated through browser automation because account creation requires action-time confirmation; successful registration and database persistence were verified through the API integration workflow.
-Build/test corroboration: backend unit 109/109; PostgreSQL integration 85/85; Angular 118/118; production build passed.
+Build/test corroboration: backend unit 109/109; PostgreSQL integration 85/85; Angular 118/118; production build passed; Docker Compose API health and frontend returned HTTP 200.
 Related historical gap: GAP-001. Historical Phase 2 evidence remains unchanged.

@@ -38,7 +38,7 @@ internal sealed class StripePaymentGateway(IOptions<StripeOptions> options) : IP
                     PriceData = new SessionLineItemPriceDataOptions
                     {
                         Currency = request.Currency.ToLowerInvariant(),
-                        UnitAmount = checked((long)(request.Amount * 100m)),
+                        UnitAmount = PaymentAmount.ToMinorUnits(request.Amount),
                         ProductData = new SessionLineItemPriceDataProductDataOptions { Name = request.PlanName }
                     }
                 }

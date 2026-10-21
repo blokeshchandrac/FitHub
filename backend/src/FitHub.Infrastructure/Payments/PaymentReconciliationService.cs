@@ -85,7 +85,7 @@ internal sealed class PaymentReconciliationService(
         Payment payment,
         PaymentCheckoutVerification verification)
     {
-        var expectedAmountMinor = checked((long)(payment.Amount * 100m));
+        var expectedAmountMinor = PaymentAmount.ToMinorUnits(payment.Amount);
         if (verification.IsLiveMode ||
             verification.CheckoutSessionId != payment.ProviderReference ||
             verification.PaymentId != payment.Id ||

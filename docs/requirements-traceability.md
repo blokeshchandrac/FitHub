@@ -21,3 +21,12 @@ This document maps the dependency-focused implementation batch completed on 2026
 ## Migration
 
 `20260908155406_AddTrainerAssignmentsAndTrainingProfile` adds the branch catalogue, historical Trainer–Member assignments, training-profile columns, workout-template ownership kind and workout-plan assignment end time. Existing data is retained. Existing Member profiles are marked incomplete because the newly required values cannot be safely invented; development demo accounts are completed only by the Development seeder.
+
+## Phase 3 corrections (2026-10-21)
+
+| Requirement | Angular route/component | API/application implementation | Persistence | Verification | Current status |
+| --- | --- | --- | --- | --- | --- |
+| FR-01 | `/register` (`RegistrationPage`); public `/terms` and `/privacy` pages | `RegisterRequest.ConsentAccepted`; `AuthenticationController.Register`; `IdentityAuthenticationService.RegisterAsync`; the server supplies consent timestamp and version `1.0` | Nullable `AspNetUsers.ConsentAcceptedAtUtc` and `ConsentVersion` preserve historical users | `AuthenticationApiTests` consent and duplicate-email cases; Angular registration/legal-page specs; `docs/testing/evidence/phase3/FR-01-registration-consent.log` | Implemented. Browser-side validation is backed by server validation and persisted evidence. |
+| FR-13 | `/workouts/session/:id` (`WorkoutSessionPage`) | `WorkoutSetCommand.RestSeconds`; validator range 0–3,600 seconds; `WorkoutService` mapping keeps exercise duration and rest separate | Nullable `SetLogs.RestSeconds` plus database range constraint preserves historical sets | `WorkoutRestAndPaymentAmountTests`; `Stage5WorkoutProgressTests`; Angular workout-session spec; `docs/testing/evidence/phase3/FR-13-workout-rest-time.log` | Implemented. Completed history returns the persisted rest value without changing volume or PR calculations. |
+
+Migration `20261021113350_AddRegistrationConsentAndWorkoutRestSeconds` adds the three nullable columns and the rest-time range constraint without rewriting existing users, sets, payments, or memberships. The current seeded Monthly plan is EUR 29.90 for one month; Stripe minor-unit conversion is verified as 2,990 cents and the database remains the checkout price authority.

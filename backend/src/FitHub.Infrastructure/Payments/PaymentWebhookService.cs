@@ -90,7 +90,7 @@ internal sealed class PaymentWebhookService(
             notification.PlanId != payment.MembershipPlanId ||
             notification.PurchaseKind != payment.PurchaseKind ||
             notification.IsLiveMode ||
-            notification.AmountTotalMinor != checked((long)(payment.Amount * 100m)) ||
+            notification.AmountTotalMinor != PaymentAmount.ToMinorUnits(payment.Amount) ||
             !string.Equals(notification.Currency, payment.Currency, StringComparison.OrdinalIgnoreCase))
         {
             throw new PaymentWebhookValidationException("Stripe Checkout metadata does not match the pending payment.");

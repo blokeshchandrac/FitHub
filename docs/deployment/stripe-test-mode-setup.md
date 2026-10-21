@@ -1,6 +1,6 @@
 # Stripe Test Mode development setup
 
-FitHub accepts Stripe Test Mode only. Never enter a real card and never commit `sk_test_...` or `whsec_...` values. Membership plan price and duration are authoritative in PostgreSQL. Checkout uses Stripe `price_data` generated from the selected active plan, so separate Stripe Price IDs are deliberately not required; the seeded Monthly plan is EUR 49.90 for one month and Annual is EUR 499.00 for twelve months.
+FitHub accepts Stripe Test Mode only. Never enter a real card and never commit `sk_test_...` or `whsec_...` values. Membership plan price and duration are authoritative in PostgreSQL. Checkout uses Stripe `price_data` generated from the selected active plan, so separate Stripe Price IDs are deliberately not required; the seeded Monthly plan is EUR 29.90 for one month and Annual is EUR 499.00 for twelve months.
 
 ## 1. Get Test Mode credentials
 

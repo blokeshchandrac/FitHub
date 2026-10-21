@@ -21,8 +21,9 @@ Actual result
 - Browser: after Save exercise, the completed-set table displayed Duration 45 s and Rest 90 s in separate columns; volume was 480 kg.
 - Browser: after Complete workout and a full page refresh, the completed session still displayed Duration 45 s and Rest 90 s separately.
 - PostgreSQL integration verification returned RestSeconds=90 from the persisted completed session and retained the 480 kg volume.
+- Existing development database query returned RestSeconds=90, DurationSeconds=45, Repetitions=8 and WeightKg=60.00 for the saved set.
 - Validation tests accepted null rest for historical rows and valid values, and rejected negative values and values above 3,600 seconds.
 
 Decision: PASSED.
-Build/test corroboration: backend unit 109/109; PostgreSQL integration 85/85; Angular 118/118; production build passed.
+Build/test corroboration: backend unit 109/109; PostgreSQL integration 85/85; Angular 118/118; production build passed; Docker Compose API health and frontend returned HTTP 200.
 Related historical defect: DEF-005. Historical Phase 2 evidence remains unchanged.

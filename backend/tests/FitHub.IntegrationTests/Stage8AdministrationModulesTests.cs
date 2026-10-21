@@ -18,10 +18,10 @@ public sealed class Stage8AdministrationModulesTests:IAsyncLifetime
         var member = await AddUser("revenue8@test.local", "Member");
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<FitHubDbContext>();
-        var plan = new MembershipPlan { Name = "Revenue plan", Price = 50m, BillingPeriodMonths = 1 };
+        var plan = new MembershipPlan { Name = "Monthly", Price = 29.90m, BillingPeriodMonths = 1 };
         db.MembershipPlans.Add(plan);
 
-        var succeeded = new Payment { UserId = member, MembershipPlanId = plan.Id, PurchaseKind = MembershipPurchaseKind.Purchase, Amount = 50m };
+        var succeeded = new Payment { UserId = member, MembershipPlanId = plan.Id, PurchaseKind = MembershipPurchaseKind.Purchase, Amount = 29.90m };
         succeeded.MarkSucceeded(DateTimeOffset.UtcNow, "pi_succeeded_stage8");
         var partiallyRefunded = new Payment { UserId = member, MembershipPlanId = plan.Id, PurchaseKind = MembershipPurchaseKind.Renewal, Amount = 30m };
         partiallyRefunded.MarkSucceeded(DateTimeOffset.UtcNow, "pi_refunded_stage8");
@@ -36,7 +36,7 @@ public sealed class Stage8AdministrationModulesTests:IAsyncLifetime
         var dashboard = await service.GetAsync();
         var csv = await service.ExportAsync("payments");
 
-        Assert.Equal(70m, dashboard.CompletedRevenue);
+        Assert.Equal(49.90m, dashboard.CompletedRevenue);
         Assert.Contains(succeeded.Id.ToString(), csv.Content);
         Assert.Contains(partiallyRefunded.Id.ToString(), csv.Content);
         Assert.DoesNotContain(seededDemo.Id.ToString(), csv.Content);

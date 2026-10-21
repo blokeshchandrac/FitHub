@@ -31,5 +31,5 @@ describe('MembershipPage checkout', () => {
     expect(fixture.nativeElement.querySelector('.checkout-error button').textContent).toContain('Retry');
   });
 
-  function overview(){return{effectiveState:'None',currentMembership:null,plans:[{id:'plan-1',name:'Monthly',description:'Flexible',price:49.9,currency:'EUR',billingPeriodMonths:1,isActive:true}],payments:[]};}
+  function overview(){return{effectiveState:'None',currentMembership:null,plans:[{id:'plan-1',name:'Monthly',description:'Flexible',price:29.9,currency:'EUR',billingPeriodMonths:1,isActive:true}],payments:[]};}
 });
