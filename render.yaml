@@ -10,7 +10,6 @@ services:
     dockerfilePath: ./backend/src/FitHub.Api/Dockerfile
     dockerContext: .
     healthCheckPath: /health
-    maxShutdownDelaySeconds: 30
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
