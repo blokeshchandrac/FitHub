@@ -1,0 +1,35 @@
+<section class="feature-page narrow-page preferences-page">
+  <div class="page-heading">
+    <div>
+      <h1>Notification preferences</h1>
+      <p>Choose which optional FitHub updates you want to receive.</p>
+    </div>
+    <a class="secondary-button" routerLink="/notifications">Back to notifications</a>
+  </div>
+
+  @if (loading()) {
+    <div class="foundation-card" role="status">Loading preferences…</div>
+  } @else {
+    <div class="foundation-card preference-list">
+      @for (item of items(); track item.category) {
+        <label class="notification-preference" [for]="'preference-' + item.category">
+          <span><strong>{{ item.displayName }}</strong><small>{{ item.description }}</small></span>
+          <input
+            [id]="'preference-' + item.category"
+            type="checkbox"
+            role="switch"
+            [checked]="item.enabled"
+            [disabled]="saving() || !item.canDisable"
+            [attr.aria-checked]="item.enabled"
+            (change)="toggle(item.category, $any($event.target).checked)"
+          />
+        </label>
+      }
+      @if (message()) { <div class="success-message" role="status">{{ message() }}</div> }
+      @if (error()) { <div class="api-error" role="alert">{{ error() }}</div> }
+      <button class="primary-button" type="button" [disabled]="saving() || items().length === 0" (click)="save()">
+        {{ saving() ? 'Saving…' : 'Save preferences' }}
+      </button>
+    </div>
+  }
+</section>

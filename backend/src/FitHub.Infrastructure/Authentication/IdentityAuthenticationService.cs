@@ -67,6 +67,7 @@ internal sealed class IdentityAuthenticationService(
         }
 
         var roles = await userManager.GetRolesAsync(user);
+        dbContext.NotificationPreferences.AddRange(NotificationPreference.CreateDefaults(user.Id));
         var tokens = tokenIssuer.CreateTokens(user, roles.ToArray());
         dbContext.RefreshTokens.Add(CreateRefreshToken(user.Id, tokens, ipAddress));
         await AuditAsync("RegistrationSucceeded", user.Id, ipAddress, "Member account registered.", cancellationToken, saveChanges: false);

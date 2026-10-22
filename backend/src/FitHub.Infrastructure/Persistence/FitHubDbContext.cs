@@ -46,11 +46,12 @@ public sealed class FitHubDbContext(DbContextOptions<FitHubDbContext> options)
     public DbSet<ClassSchedule> ClassSchedules => Set<ClassSchedule>();
     public DbSet<ClassBooking> ClassBookings => Set<ClassBooking>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
     public DbSet<Recommendation> Recommendations => Set<Recommendation>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
-    public DbSet<GymBranch> GymBranches => Set<GymBranch>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<GymBranch> GymBranches => Set<GymBranch>();
     public DbSet<TrainerMemberAssignment> TrainerMemberAssignments => Set<TrainerMemberAssignment>();
 
     protected override void OnModelCreating(ModelBuilder builder)

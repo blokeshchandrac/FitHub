@@ -4,6 +4,7 @@ using FitHub.Domain.Memberships;
 using FitHub.Domain.Parking;
 using FitHub.Domain.Payments;
 using FitHub.Domain.Workouts;
+using FitHub.Domain.Communications;
 using FitHub.Application.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -111,6 +112,17 @@ public sealed class DevelopmentDataSeeder(
 
         if (updateRequired)
             EnsureSucceeded(await userManager.UpdateAsync(user), $"update demo account '{email}'");
+
+        if (role == AuthorizationPolicies.Member)
+        {
+            var existingCategories = await dbContext.NotificationPreferences
+                .Where(item => item.UserId == user.Id)
+                .Select(item => item.Category)
+                .ToListAsync();
+            var missingCategories = Enum.GetValues<NotificationType>().Except(existingCategories);
+            dbContext.NotificationPreferences.AddRange(missingCategories.Select(category => new NotificationPreference(user.Id, category)));
+            await dbContext.SaveChangesAsync();
+        }
     }
 
     private async Task<Guid> SeedDevelopmentBranchAsync(CancellationToken cancellationToken)

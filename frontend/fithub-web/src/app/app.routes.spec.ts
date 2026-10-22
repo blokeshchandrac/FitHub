@@ -41,6 +41,23 @@ describe('application routes', () => {
     expect(landing?.redirectTo).toBeUndefined();
     expect(landing?.canActivate).toContain(anonymousLandingGuard);
   });
+
+  it('exposes the public password-reset completion route', () => {
+    const publicLayout = createRoutes(productionDevelopmentRoutes).find(
+      (route) => route.path === '' && route.component,
+    );
+    const reset = publicLayout?.children?.find((child) => child.path === 'reset-password');
+    expect(reset?.loadComponent).toBeTypeOf('function');
+  });
+
+  it('keeps notification preferences inside the authenticated Member application', () => {
+    const applicationLayout = createRoutes(productionDevelopmentRoutes).find(
+      (route) => route.path === '' && route.children?.some((child) => child.path === 'notification-preferences'),
+    );
+    const preferences = applicationLayout?.children?.find((child) => child.path === 'notification-preferences');
+    expect(preferences?.loadComponent).toBeTypeOf('function');
+    expect(preferences?.canActivate?.length).toBe(3);
+  });
 });
 
 function findRoute(routes: readonly Route[], path: string): Route | undefined {

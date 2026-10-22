@@ -53,6 +53,8 @@ public sealed class AuthenticationApiTests : IAsyncLifetime
             {
                 services.RemoveAll<IPaymentGateway>();
                 services.AddSingleton<IPaymentGateway, CheckoutTestGateway>();
+                services.RemoveAll<IPasswordResetEmailSender>();
+                services.AddSingleton<IPasswordResetEmailSender, TestPasswordResetEmailSender>();
             });
         });
 
@@ -108,6 +110,9 @@ public sealed class AuthenticationApiTests : IAsyncLifetime
             .FindByEmailAsync(request.email);
         Assert.NotNull(stored!.ConsentAcceptedAtUtc);
         Assert.Equal(RegistrationConsent.CurrentVersion, stored.ConsentVersion);
+        var preferenceCount = await scope.ServiceProvider.GetRequiredService<FitHubDbContext>().NotificationPreferences
+            .CountAsync(item => item.UserId == stored.Id);
+        Assert.Equal(Enum.GetValues<FitHub.Domain.Communications.NotificationType>().Length, preferenceCount);
     }
 
     [Fact]
@@ -216,12 +221,201 @@ public sealed class AuthenticationApiTests : IAsyncLifetime
     public async Task PasswordRecoveryDoesNotRevealWhetherAccountExists()
     {
         using var client = CreateClient();
+        var sender = _factory.Services.GetRequiredService<IPasswordResetEmailSender>() as TestPasswordResetEmailSender;
+        sender!.Clear();
         using var known = await client.PostAsJsonAsync("/api/auth/forgot-password", new { email = "member.auth@fithub.test" });
         using var missing = await client.PostAsJsonAsync("/api/auth/forgot-password", new { email = "missing.auth@fithub.test" });
 
         Assert.Equal(HttpStatusCode.Accepted, known.StatusCode);
         Assert.Equal(HttpStatusCode.Accepted, missing.StatusCode);
         Assert.Equal(await known.Content.ReadAsStringAsync(), await missing.Content.ReadAsStringAsync());
+        Assert.Single(sender.Messages);
+    }
+
+    [Fact]
+    public async Task MemberCanManageOnlyCurrentNotificationPreferencesAndInvalidCategoryIsRejected()
+    {
+        using var client = CreateClient();
+        var memberToken = await LoginAndGetAccessTokenAsync(client, "member.auth@fithub.test");
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", memberToken);
+
+        using var defaultsResponse = await client.GetAsync("/api/notifications/preferences");
+        Assert.Equal(HttpStatusCode.OK, defaultsResponse.StatusCode);
+        var defaults = await defaultsResponse.Content.ReadFromJsonAsync<PreferencePayload[]>();
+        Assert.Equal(Enum.GetValues<FitHub.Domain.Communications.NotificationType>().Length, defaults!.Length);
+        Assert.All(defaults, item => Assert.True(item.Enabled));
+
+        using var updateResponse = await client.PutAsJsonAsync("/api/notifications/preferences", new
+        {
+            preferences = new[] { new { category = "PersonalRecord", enabled = false } }
+        });
+        Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+        var updated = await updateResponse.Content.ReadFromJsonAsync<PreferencePayload[]>();
+        Assert.False(Assert.Single(updated!, item => item.Category == "PersonalRecord").Enabled);
+
+        using var invalid = await client.PutAsJsonAsync("/api/notifications/preferences", new
+        {
+            preferences = new[] { new { category = "NotARealCategory", enabled = false } }
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+
+        var trainerToken = await LoginAndGetAccessTokenAsync(client, "trainer.auth@fithub.test");
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", trainerToken);
+        using var trainer = await client.GetAsync("/api/notifications/preferences");
+        Assert.Equal(HttpStatusCode.Forbidden, trainer.StatusCode);
+    }
+
+    [Fact]
+    public async Task PasswordResetChangesPasswordStoresOnlyHashAndIsSingleUse()
+    {
+        const string email = "reset-success@fithub.test";
+        const string replacement = "Replacement-Password-84!";
+        await using (var scope = _factory.Services.CreateAsyncScope())
+            await CreateUserAsync(scope.ServiceProvider, email, AuthorizationPolicies.Member);
+        var sender = Assert.IsType<TestPasswordResetEmailSender>(_factory.Services.GetRequiredService<IPasswordResetEmailSender>());
+        sender.Clear();
+        using var client = CreateClient();
+
+        using var request = await client.PostAsJsonAsync("/api/auth/forgot-password", new { email });
+        Assert.Equal(HttpStatusCode.Accepted, request.StatusCode);
+        var message = Assert.Single(sender.Messages);
+        var link = ReadResetLink(message.ResetUrl);
+
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var user = await scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>().FindByEmailAsync(email);
+            var stored = Assert.Single(await scope.ServiceProvider.GetRequiredService<FitHubDbContext>().PasswordResetTokens
+                .Where(item => item.UserId == user!.Id).ToListAsync());
+            Assert.NotEqual(link.Token, stored.TokenHash);
+            Assert.Equal(64, stored.TokenHash.Length);
+        }
+
+        using var reset = await client.PostAsJsonAsync("/api/auth/reset-password", new
+        {
+            email = link.Email,
+            token = link.Token,
+            newPassword = replacement,
+            confirmPassword = replacement
+        });
+        Assert.Equal(HttpStatusCode.OK, reset.StatusCode);
+
+        using var oldLogin = await client.PostAsJsonAsync("/api/auth/login", new { email, password = ValidPassword });
+        using var newLogin = await client.PostAsJsonAsync("/api/auth/login", new { email, password = replacement });
+        using var reused = await client.PostAsJsonAsync("/api/auth/reset-password", new
+        {
+            email,
+            token = link.Token,
+            newPassword = "Another-Replacement-85!",
+            confirmPassword = "Another-Replacement-85!"
+        });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, oldLogin.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, newLogin.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, reused.StatusCode);
+        Assert.Contains("invalid", await reused.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ModifiedOrMismatchedPasswordResetTokenIsRejected()
+    {
+        const string email = "reset-mismatch@fithub.test";
+        await using (var scope = _factory.Services.CreateAsyncScope())
+            await CreateUserAsync(scope.ServiceProvider, email, AuthorizationPolicies.Member);
+        var sender = Assert.IsType<TestPasswordResetEmailSender>(_factory.Services.GetRequiredService<IPasswordResetEmailSender>());
+        sender.Clear();
+        using var client = CreateClient();
+        await client.PostAsJsonAsync("/api/auth/forgot-password", new { email });
+        var link = ReadResetLink(Assert.Single(sender.Messages).ResetUrl);
+
+        using var modified = await client.PostAsJsonAsync("/api/auth/reset-password", new
+        {
+            email,
+            token = link.Token[..^1] + (link.Token[^1] == 'A' ? "B" : "A"),
+            newPassword = "Replacement-Password-84!",
+            confirmPassword = "Replacement-Password-84!"
+        });
+        using var mismatched = await client.PostAsJsonAsync("/api/auth/reset-password", new
+        {
+            email = "member.auth@fithub.test",
+            token = link.Token,
+            newPassword = "Replacement-Password-84!",
+            confirmPassword = "Replacement-Password-84!"
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, modified.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, mismatched.StatusCode);
+    }
+
+    [Fact]
+    public async Task NewPasswordResetRequestInvalidatesPreviousOutstandingToken()
+    {
+        const string email = "reset-superseded@fithub.test";
+        await using (var scope = _factory.Services.CreateAsyncScope())
+            await CreateUserAsync(scope.ServiceProvider, email, AuthorizationPolicies.Member);
+        var sender = Assert.IsType<TestPasswordResetEmailSender>(_factory.Services.GetRequiredService<IPasswordResetEmailSender>());
+        sender.Clear();
+        using var client = CreateClient();
+        await client.PostAsJsonAsync("/api/auth/forgot-password", new { email });
+        var first = ReadResetLink(Assert.Single(sender.Messages).ResetUrl);
+        await client.PostAsJsonAsync("/api/auth/forgot-password", new { email });
+        var second = ReadResetLink(sender.Messages.Last().ResetUrl);
+
+        using var firstAttempt = await client.PostAsJsonAsync("/api/auth/reset-password", new
+        {
+            email,
+            token = first.Token,
+            newPassword = "Replacement-Password-84!",
+            confirmPassword = "Replacement-Password-84!"
+        });
+        using var secondAttempt = await client.PostAsJsonAsync("/api/auth/reset-password", new
+        {
+            email,
+            token = second.Token,
+            newPassword = "Replacement-Password-84!",
+            confirmPassword = "Replacement-Password-84!"
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, firstAttempt.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, secondAttempt.StatusCode);
+    }
+
+    [Fact]
+    public async Task ExpiredPasswordResetTokenAndWeakPasswordAreRejected()
+    {
+        const string email = "reset-expired@fithub.test";
+        await using (var scope = _factory.Services.CreateAsyncScope())
+            await CreateUserAsync(scope.ServiceProvider, email, AuthorizationPolicies.Member);
+        var sender = Assert.IsType<TestPasswordResetEmailSender>(_factory.Services.GetRequiredService<IPasswordResetEmailSender>());
+        sender.Clear();
+        using var client = CreateClient();
+        await client.PostAsJsonAsync("/api/auth/forgot-password", new { email });
+        var first = ReadResetLink(Assert.Single(sender.Messages).ResetUrl);
+
+        using (var weak = await client.PostAsJsonAsync("/api/auth/reset-password", new
+        {
+            email,
+            token = first.Token,
+            newPassword = "weak-password",
+            confirmPassword = "weak-password"
+        }))
+            Assert.Equal(HttpStatusCode.BadRequest, weak.StatusCode);
+
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<FitHubDbContext>().Database.ExecuteSqlRawAsync(
+                "UPDATE \"PasswordResetTokens\" SET \"ExpiresAtUtc\" = {0} WHERE \"TokenHash\" = {1}",
+                DateTimeOffset.UtcNow.AddMinutes(-1),
+                Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(first.Token))));
+        }
+
+        using var expired = await client.PostAsJsonAsync("/api/auth/reset-password", new
+        {
+            email,
+            token = first.Token,
+            newPassword = "Replacement-Password-84!",
+            confirmPassword = "Replacement-Password-84!"
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, expired.StatusCode);
     }
 
     [Fact]
@@ -577,6 +771,10 @@ public sealed class AuthenticationApiTests : IAsyncLifetime
     {
         await using var firstScope = _factory.Services.CreateAsyncScope();
         await firstScope.ServiceProvider.GetRequiredService<FitHub.Infrastructure.Persistence.Seeding.DevelopmentDataSeeder>().SeedAsync();
+        var firstUsers = firstScope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var firstActive = await firstUsers.FindByEmailAsync("active-member@fithub.demo");
+        await firstScope.ServiceProvider.GetRequiredService<FitHub.Application.Notifications.INotificationService>()
+            .UpdatePreferencesAsync(firstActive!.Id, [new("PersonalRecord", false)]);
         await using var secondScope = _factory.Services.CreateAsyncScope();
         await secondScope.ServiceProvider.GetRequiredService<FitHub.Infrastructure.Persistence.Seeding.DevelopmentDataSeeder>().SeedAsync();
 
@@ -593,6 +791,9 @@ public sealed class AuthenticationApiTests : IAsyncLifetime
         Assert.Equal(1, monthly.BillingPeriodMonths);
         var payment = await db.Payments.SingleAsync(item => item.UserId == active.Id && item.Status == PaymentStatus.Succeeded);
         Assert.Equal(29.90m, payment.Amount);
+        var savedPreference = await db.NotificationPreferences.SingleAsync(item =>
+            item.UserId == active.Id && item.Category == FitHub.Domain.Communications.NotificationType.PersonalRecord);
+        Assert.False(savedPreference.Enabled);
     }
 
     private HttpClient CreateClient() => _factory.CreateClient(new WebApplicationFactoryClientOptions
@@ -638,11 +839,20 @@ public sealed class AuthenticationApiTests : IAsyncLifetime
         return request;
     }
 
+    private static (string Email, string Token) ReadResetLink(string resetUrl)
+    {
+        var query = new Uri(resetUrl).Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Select(part => part.Split('=', 2))
+            .ToDictionary(part => part[0], part => Uri.UnescapeDataString(part[1]), StringComparer.OrdinalIgnoreCase);
+        return (query["email"], query["token"]);
+    }
+
     private sealed record AuthenticationPayload(string AccessToken);
     private sealed record PlanPayload(Guid Id, decimal Price);
     private sealed record CheckoutPayload(string CheckoutUrl);
     private sealed record ClassSchedulePayload(Guid Id, string Status);
     private sealed record AccessValidationPayload(string Code);
+    private sealed record PreferencePayload(string Category, bool Enabled);
 
     private sealed class CheckoutTestGateway : IPaymentGateway
     {
@@ -664,4 +874,18 @@ public sealed class AuthenticationApiTests : IAsyncLifetime
             throw new InvalidOperationException("Simulated Stripe initialization failure with internal detail.");
         public PaymentWebhookNotification ParseWebhook(string payload, string signature) => throw new NotSupportedException();
     }
+
+    private sealed class TestPasswordResetEmailSender : IPasswordResetEmailSender
+    {
+        private readonly List<ResetEmail> _messages = [];
+        public IReadOnlyList<ResetEmail> Messages => _messages;
+        public void Clear() => _messages.Clear();
+        public Task SendPasswordResetAsync(string recipientEmail, string recipientName, string resetUrl, TimeSpan validity, CancellationToken cancellationToken = default)
+        {
+            _messages.Add(new ResetEmail(recipientEmail, resetUrl));
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed record ResetEmail(string RecipientEmail, string ResetUrl);
 }

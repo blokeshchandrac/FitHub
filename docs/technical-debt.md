@@ -16,4 +16,6 @@ This list records current, factual release limitations. Historical Phase 2 resul
 - GAP-001 / FR-01: registration now requires explicit consent and stores backend-controlled timestamp/version evidence.
 - DEF-005 / FR-13: every workout set now has a distinct nullable rest-time field, validation, persistence and history display.
 - DEF-004 / FR-23–FR-24: Connected Mode now keeps physical sensor observations separate from persisted SignalR snapshots, orders observations per machine, ignores duplicate/stale readings, and releases shared equipment only after one uninterrupted 30-second clear period.
+- GAP-002 / FR-03: password recovery now sends a neutral response, delivers a configured Mailpit/SMTP link, stores only a token hash, enforces account binding and 30-minute single-use expiry, invalidates prior requests, and revokes active refresh tokens after reset.
+- DEF-006 / FR-33: Members now have persisted preferences for every notification category with a real FitHub trigger; optional notifications are suppressed before creation, existing notifications remain available, and stable deduplication remains enforced.
 - Monthly membership source data now uses EUR 29.90; checkout conversion and confirmed-payment revenue use the server-stored amount.
