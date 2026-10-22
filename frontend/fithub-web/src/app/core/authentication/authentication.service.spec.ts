@@ -61,4 +61,21 @@ describe('AuthenticationService', () => {
     expect(service.accessToken()).toBeNull();
     expect(service.currentUser()).toBeNull();
   });
+
+  it('submits the complete password-reset payload', async () => {
+    const service = TestBed.inject(AuthenticationService);
+    const payload = {
+      email: 'member@fithub.test',
+      token: 'secure-reset-token-with-more-than-32-characters',
+      newPassword: 'Replacement-Password-84!',
+      confirmPassword: 'Replacement-Password-84!',
+    };
+    const result = firstValueFrom(service.resetPassword(payload));
+    const request = TestBed.inject(HttpTestingController).expectOne('/api/auth/reset-password');
+
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual(payload);
+    request.flush({ message: 'Your password has been reset. You can now sign in.' });
+    expect((await result).message).toContain('reset');
+  });
 });

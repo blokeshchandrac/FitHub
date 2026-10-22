@@ -33,6 +33,7 @@ Then open:
 - Web application: `http://localhost:4040`
 - API health: `http://localhost:8080/health`
 - Swagger UI: `http://localhost:8080/swagger`
+- Local email inbox (Mailpit): `http://localhost:8025`
 
 Stop the services with `docker compose down`. The PostgreSQL data volume is preserved.
 
@@ -101,6 +102,8 @@ The demo seed process is restricted to the Development environment and reads its
 ## Authentication
 
 The Angular client provides registration, login, forgot-password, unauthorized, route-guard, interceptor, and role-aware navigation support. Access tokens remain in memory; rotating refresh tokens use an HTTP-only cookie and are persisted only as SHA-256 hashes.
+
+Password-recovery links are single-use, expire after 30 minutes, and are delivered to the local Mailpit inbox during Docker development. Configure the frontend base URL, expiry, SMTP sender, and published Mailpit ports through `.env`; the raw reset token is sent only in the email link and only its SHA-256 hash is stored in PostgreSQL.
 
 For local development, set `SeedData__Enabled=true`, provide `SeedData__DemoPassword`, and configure `Jwt__SigningKey` with at least 32 random bytes. The configured demonstration emails are:
 

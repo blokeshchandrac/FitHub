@@ -16,6 +16,7 @@ public sealed class AuthenticationController(
     private const string RefreshTokenCookie = "fithub.refresh";
     private const string InvalidCredentialsMessage = "Email or password is incorrect.";
     private const string RegistrationFailedMessage = "Registration could not be completed with the supplied details.";
+    private const string PasswordRecoveryMessage = "If an account exists for this email address, a password-reset link has been sent.";
 
     [HttpPost("register")]
     [AllowAnonymous]
@@ -115,10 +116,41 @@ public sealed class AuthenticationController(
         CancellationToken cancellationToken)
     {
         await authenticationService.RequestPasswordResetAsync(request.Email, GetIpAddress(), cancellationToken);
-        return Accepted(new
+        return Accepted(new { message = PasswordRecoveryMessage });
+    }
+
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting("password-recovery")]
+    public async Task<IActionResult> ResetPassword(
+        ResetPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!string.Equals(request.NewPassword, request.ConfirmPassword, StringComparison.Ordinal))
         {
-            message = "If an account matches that email, password recovery instructions will be sent."
-        });
+            ModelState.AddModelError(nameof(request.ConfirmPassword), "Password confirmation must match the new password.");
+            return ValidationProblem(ModelState);
+        }
+
+        var result = await authenticationService.ResetPasswordAsync(
+            new ResetPasswordCommand(request.Email, request.Token, request.NewPassword),
+            GetIpAddress(),
+            cancellationToken);
+        return result.Status switch
+        {
+            ResetPasswordStatus.Succeeded => Ok(new { message = "Your password has been reset. You can now sign in." }),
+            ResetPasswordStatus.PasswordRejected => BadRequest(new
+            {
+                code = "password_rejected",
+                message = "The new password does not meet the FitHub password requirements.",
+                errors = result.Errors
+            }),
+            _ => BadRequest(new
+            {
+                code = "password_reset_invalid",
+                message = "This password-reset link is invalid, expired, or has already been used."
+            })
+        };
     }
 
     private void WriteRefreshTokenCookie(AuthenticationTokens tokens)

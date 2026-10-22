@@ -81,6 +81,9 @@ public static class DependencyInjection
         services.Configure<JwtOptions>(jwtSection);
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<JwtTokenIssuer>();
+        services.Configure<PasswordResetOptions>(configuration.GetSection(PasswordResetOptions.SectionName));
+        services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
+        services.AddScoped<IPasswordResetEmailSender, SmtpPasswordResetEmailSender>();
         services.AddScoped<IAuthenticationService, IdentityAuthenticationService>();
         services.AddScoped<IMembershipService, MembershipService>();
         services.AddScoped<IAttendanceService, AttendanceService>();

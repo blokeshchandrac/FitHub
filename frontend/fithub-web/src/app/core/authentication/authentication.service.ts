@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { catchError, finalize, map, Observable, of, shareReplay, tap } from 'rxjs';
-import { AuthenticationResponse, CurrentUser, LoginRequest, RegistrationRequest } from './authentication.models';
+import { AuthenticationMessage, AuthenticationResponse, CurrentUser, LoginRequest, RegistrationRequest, ResetPasswordRequest } from './authentication.models';
 import { ThemeService } from '../theme/theme.service';
 
 @Injectable({ providedIn: 'root' })
@@ -61,8 +61,12 @@ export class AuthenticationService {
     );
   }
 
-  requestPasswordReset(email: string): Observable<{ message: string }> {
-    return this.http.post<{ message: string }>('/api/auth/forgot-password', { email });
+  requestPasswordReset(email: string): Observable<AuthenticationMessage> {
+    return this.http.post<AuthenticationMessage>('/api/auth/forgot-password', { email });
+  }
+
+  resetPassword(request: ResetPasswordRequest): Observable<AuthenticationMessage> {
+    return this.http.post<AuthenticationMessage>('/api/auth/reset-password', request);
   }
 
   refreshCurrentUser(): Observable<CurrentUser> {

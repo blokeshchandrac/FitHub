@@ -1,6 +1,12 @@
 name: fithub
 
 services:
+  mailpit:
+    image: axllent/mailpit:v1.31.5
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_WEB_PORT:-8025}:8025"
+
   postgres:
     image: postgres:18-alpine
     environment:
@@ -33,6 +39,13 @@ services:
       Stripe__WebBaseUrl: ${FRONTEND_BASE_URL}
       Stripe__CheckoutSuccessUrl: ${STRIPE_CHECKOUT_SUCCESS_URL}
       Stripe__CheckoutCancelUrl: ${STRIPE_CHECKOUT_CANCEL_URL}
+      PasswordReset__ExpiryMinutes: ${PASSWORD_RESET_EXPIRY_MINUTES:-30}
+      PasswordReset__FrontendBaseUrl: ${FRONTEND_BASE_URL}
+      Email__SmtpHost: mailpit
+      Email__SmtpPort: 1025
+      Email__UseTls: "false"
+      Email__SenderAddress: ${SMTP_SENDER_ADDRESS:-no-reply@fithub.local}
+      Email__SenderName: ${SMTP_SENDER_NAME:-FitHub}
       EquipmentDevices__CardUidPepper: ${EQUIPMENT_CARD_UID_PEPPER}
       SeedData__EquipmentDeviceCredential: ${EQUIPMENT_DEVICE_CREDENTIAL}
       SeedData__MemberCardUid: ${EQUIPMENT_MEMBER_CARD_UID}
@@ -46,6 +59,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      mailpit:
+        condition: service_started
 
   frontend:
     build:

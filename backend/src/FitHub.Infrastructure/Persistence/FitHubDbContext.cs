@@ -50,6 +50,7 @@ public sealed class FitHubDbContext(DbContextOptions<FitHubDbContext> options)
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<GymBranch> GymBranches => Set<GymBranch>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<TrainerMemberAssignment> TrainerMemberAssignments => Set<TrainerMemberAssignment>();
 
     protected override void OnModelCreating(ModelBuilder builder)

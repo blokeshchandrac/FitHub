@@ -9,6 +9,23 @@ public sealed record RegisterCommand(string Email, string Password, string First
 
 public sealed record LoginCommand(string Email, string Password);
 
+public sealed record ResetPasswordCommand(string Email, string Token, string NewPassword);
+
+public enum ResetPasswordStatus
+{
+    Succeeded,
+    InvalidOrExpiredToken,
+    PasswordRejected
+}
+
+public sealed record ResetPasswordResult(ResetPasswordStatus Status, IReadOnlyCollection<string> Errors)
+{
+    public static ResetPasswordResult Success() => new(ResetPasswordStatus.Succeeded, []);
+    public static ResetPasswordResult InvalidToken() => new(ResetPasswordStatus.InvalidOrExpiredToken, []);
+    public static ResetPasswordResult Rejected(IEnumerable<string> errors) =>
+        new(ResetPasswordStatus.PasswordRejected, errors.ToArray());
+}
+
 public sealed record CurrentUserDto(Guid Id, string Email, string FirstName, string LastName, IReadOnlyCollection<string> Roles, bool OnboardingCompleted);
 
 public sealed record AuthenticationTokens(

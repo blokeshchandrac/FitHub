@@ -5,6 +5,7 @@ using FitHub.Api.Realtime;
 using FitHub.Api.Simulation;
 using FitHub.Application.Equipment;
 using FitHub.Infrastructure.Payments;
+using FitHub.Infrastructure.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using System.Text.Json.Serialization;
@@ -37,6 +38,20 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddOptions<PasswordResetOptions>()
+    .Bind(builder.Configuration.GetSection(PasswordResetOptions.SectionName))
+    .Validate(options => options.ExpiryMinutes is >= 5 and <= 1440,
+        "PasswordReset:ExpiryMinutes must be between 5 and 1440 minutes.")
+    .Validate(options => Uri.TryCreate(options.FrontendBaseUrl, UriKind.Absolute, out var uri)
+        && uri.Scheme is "http" or "https",
+        "PasswordReset:FrontendBaseUrl must be an absolute HTTP or HTTPS URL.")
+    .ValidateOnStart();
+builder.Services.AddOptions<EmailOptions>()
+    .Bind(builder.Configuration.GetSection(EmailOptions.SectionName))
+    .Validate(options => !string.IsNullOrWhiteSpace(options.SmtpHost), "Email:SmtpHost is required.")
+    .Validate(options => options.SmtpPort is > 0 and <= 65535, "Email:SmtpPort is invalid.")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.SenderAddress), "Email:SenderAddress is required.")
+    .ValidateOnStart();
 if (!builder.Environment.IsEnvironment("Testing"))
 {
     builder.Services.AddOptions<StripeOptions>()
@@ -87,7 +102,7 @@ builder.Services.AddRateLimiter(options =>
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions
         {
-            PermitLimit = 3,
+            PermitLimit = builder.Environment.IsEnvironment("Testing") ? 100 : 3,
             Window = TimeSpan.FromMinutes(10),
             QueueLimit = 0,
             AutoReplenishment = true
