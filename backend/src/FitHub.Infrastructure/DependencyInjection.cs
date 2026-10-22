@@ -53,12 +53,20 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        bool enableDatabaseRetry = false)
     {
         var connectionString = configuration.GetConnectionString("FitHubDatabase")
             ?? throw new InvalidOperationException("Connection string 'FitHubDatabase' is not configured.");
 
-        services.AddDbContext<FitHubDbContext>(options => options.UseNpgsql(connectionString));
+        services.AddDbContext<FitHubDbContext>(options => options.UseNpgsql(connectionString, npgsql =>
+        {
+            // Neon can briefly reject connections while a suspended compute endpoint wakes.
+            // Keep retries production-only because EF's retry strategy cannot wrap the
+            // user-managed transactions used by the integration test fixtures.
+            if (enableDatabaseRetry)
+                npgsql.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), errorCodesToAdd: null);
+        }));
         services
             .AddIdentityCore<ApplicationUser>(options =>
             {
@@ -83,7 +91,19 @@ public static class DependencyInjection
         services.AddScoped<JwtTokenIssuer>();
         services.Configure<PasswordResetOptions>(configuration.GetSection(PasswordResetOptions.SectionName));
         services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
-        services.AddScoped<IPasswordResetEmailSender, SmtpPasswordResetEmailSender>();
+        var emailOptions = configuration.GetSection(EmailOptions.SectionName).Get<EmailOptions>() ?? new EmailOptions();
+        if (string.Equals(emailOptions.Provider, EmailOptions.BrevoProvider, StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddHttpClient<IPasswordResetEmailSender, BrevoPasswordResetEmailSender>(client =>
+            {
+                client.BaseAddress = new Uri(emailOptions.Brevo.ApiBaseUrl);
+                client.Timeout = TimeSpan.FromSeconds(emailOptions.Brevo.TimeoutSeconds);
+            });
+        }
+        else
+        {
+            services.AddScoped<IPasswordResetEmailSender, SmtpPasswordResetEmailSender>();
+        }
         services.AddScoped<IAuthenticationService, IdentityAuthenticationService>();
         services.AddScoped<IMembershipService, MembershipService>();
         services.AddScoped<IAttendanceService, AttendanceService>();

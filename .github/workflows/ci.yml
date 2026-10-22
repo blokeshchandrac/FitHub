@@ -30,7 +30,10 @@ jobs:
           cache-dependency-path: frontend/fithub-web/package-lock.json
       - run: npm ci
       - run: npm test -- --watch=false
-      - run: npm run build -- --configuration production
+      - name: Build production frontend with hosted runtime configuration
+        run: npm run build:render
+        env:
+          PUBLIC_API_BASE_URL: https://fithub-api-10252426.onrender.com
       - name: Audit shipped production dependencies
         run: npm audit --omit=dev
       - name: Report complete dependency audit

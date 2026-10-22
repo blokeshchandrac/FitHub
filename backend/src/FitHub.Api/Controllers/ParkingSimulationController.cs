@@ -16,12 +16,11 @@ namespace FitHub.Api.Controllers;
 public sealed class ParkingSimulationController(
     IOptions<SimulationOptions> options,
     IParkingSimulationService service,
-    IHostEnvironment hostEnvironment,
     ILogger<ParkingSimulationController> logger) : ControllerBase
 {
     private readonly SimulationOptions settings = options.Value;
-    private bool IsAvailable => settings.Enabled &&
-        (hostEnvironment.IsDevelopment() || hostEnvironment.IsEnvironment("Testing"));
+    // The hosted evaluator lab is enabled explicitly and still requires Administrator authorization.
+    private bool IsAvailable => settings.Enabled;
 
     [HttpGet("status")]
     public IActionResult Status() => IsAvailable

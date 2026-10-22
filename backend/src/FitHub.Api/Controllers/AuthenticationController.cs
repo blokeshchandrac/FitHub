@@ -167,7 +167,9 @@ public sealed class AuthenticationController(
     {
         HttpOnly = true,
         Secure = !environment.IsDevelopment() || Request.IsHttps,
-        SameSite = SameSiteMode.Strict,
+        // Render serves the Angular site and API on different origins; None is required for the
+        // HttpOnly refresh cookie while the access token remains memory-only in the browser.
+        SameSite = environment.IsDevelopment() ? SameSiteMode.Strict : SameSiteMode.None,
         Expires = expires,
         Path = "/api/auth"
     };

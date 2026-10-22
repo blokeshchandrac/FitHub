@@ -155,7 +155,11 @@ public sealed class DevelopmentDataSeeder(
     {
         var accounts = configuration.GetSection("SeedData:Accounts").Get<DemoAccountOptions[]>() ?? [];
         var activeAccounts = accounts.Where(account =>
-            account.Role == "Member" && account.MembershipState == "Active");
+                account.Role == "Member" && account.MembershipState == "Active")
+            // Configuration providers merge array indexes instead of replacing the
+            // entire array. Deduplicate by stable email so an environment-specific
+            // override can never enqueue the same synthetic payment twice.
+            .DistinctBy(account => account.Email, StringComparer.OrdinalIgnoreCase);
         var plan = await dbContext.MembershipPlans.SingleOrDefaultAsync(item => item.Name == "Monthly", cancellationToken);
         if (plan is null) return;
 
@@ -174,7 +178,8 @@ public sealed class DevelopmentDataSeeder(
                 membership.Activate(now.AddDays(-7), now.AddMonths(plan.BillingPeriodMonths));
                 dbContext.Memberships.Add(membership);
             }
-            else if (!membership.IsActiveAt(now))
+            else if (!membership.IsActiveAt(now)
+                && !string.Equals(configuration["SeedData:Mode"], "Evaluation", StringComparison.Ordinal))
             {
                 membership.Activate(now.AddDays(-7), now.AddMonths(plan.BillingPeriodMonths));
             }

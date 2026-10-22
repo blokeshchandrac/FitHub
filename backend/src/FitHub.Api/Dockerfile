@@ -14,5 +14,7 @@ RUN dotnet publish backend/src/FitHub.Api/FitHub.Api.csproj -c Release -o /app/p
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
+RUN mkdir -p /app/App_Data/fault-images && chown -R $APP_UID:$APP_UID /app
+USER $APP_UID
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "FitHub.Api.dll"]

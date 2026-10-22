@@ -5,6 +5,7 @@
     "ng": "ng",
     "start": "ng serve --port 4040 --proxy-config proxy.conf.json",
     "build": "ng build",
+    "build:render": "node scripts/write-runtime-config.mjs && ng build --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },

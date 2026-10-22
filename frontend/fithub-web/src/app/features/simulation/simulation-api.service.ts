@@ -4,6 +4,7 @@ import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } fro
 import { firstValueFrom } from 'rxjs';
 import { AuthenticationService } from '../../core/authentication/authentication.service';
 import { EquipmentChanged } from '../../core/equipment/equipment.models';
+import { RuntimeConfigService } from '../../core/configuration/runtime-config.service';
 import {
   SimulationBackendStatus,
   SimulationConnectionState,
@@ -17,6 +18,7 @@ import {
 export class SimulationApiService {
   private readonly http = inject(HttpClient);
   private readonly authentication = inject(AuthenticationService);
+  private readonly runtimeConfig = inject(RuntimeConfigService);
   private connection?: HubConnection;
   readonly backendState = signal<SimulationConnectionState>('disconnected');
   readonly signalRState = signal<SimulationConnectionState>('disconnected');
@@ -60,7 +62,7 @@ export class SimulationApiService {
     this.signalRState.set('connecting');
     this.connectionMessage.set('API verified. Connecting to EquipmentHub…');
     const connection = new HubConnectionBuilder()
-      .withUrl(hubUrl, { accessTokenFactory: () => this.authentication.accessToken() ?? '' })
+      .withUrl(this.runtimeConfig.hubUrl(hubUrl), { accessTokenFactory: () => this.authentication.accessToken() ?? '', withCredentials: true })
       .withAutomaticReconnect()
       .configureLogging(LogLevel.Warning)
       .build();

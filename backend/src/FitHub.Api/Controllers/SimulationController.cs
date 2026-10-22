@@ -17,12 +17,11 @@ public sealed class SimulationController(
     SimulationSessionService sessions,
     SimulationMemberCatalogService memberCatalog,
     ConnectedEquipmentSimulationService connectedEquipment,
-    IHostEnvironment hostEnvironment,
     ILogger<SimulationController> logger) : ControllerBase
 {
     private readonly SimulationOptions settings = options.Value;
-    private bool IsAvailable => settings.Enabled &&
-        (hostEnvironment.IsDevelopment() || hostEnvironment.IsEnvironment("Testing"));
+    // Production simulation control is an explicit hosting switch and remains Administrator-only.
+    private bool IsAvailable => settings.Enabled;
 
     [HttpGet("status")]
     [ProducesResponseType<SimulationStatusResponse>(StatusCodes.Status200OK)]
@@ -43,7 +42,6 @@ public sealed class SimulationController(
     }
 
     [HttpGet("members")]
-    [AllowAnonymous]
     [ProducesResponseType<IReadOnlyCollection<SimulationMemberResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IReadOnlyCollection<SimulationMemberResponse>>> Members(CancellationToken cancellationToken)

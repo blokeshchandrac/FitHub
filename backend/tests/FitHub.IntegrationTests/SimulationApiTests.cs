@@ -75,7 +75,7 @@ public sealed class SimulationApiFixture : IAsyncLifetime
         db.ParkingCameras.Add(new ParkingCamera(ParkingSimulationConstants.CameraId, "test-only-hash"));
         await db.SaveChangesAsync();
 
-        using var client = Factory.CreateClient();
+        using var client = await CreateAdministratorClientAsync();
         ExistingMember = Assert.Single((await client.GetFromJsonAsync<SimulationMemberResponse[]>("/api/simulation/members"))!);
     }
 
@@ -139,6 +139,8 @@ public sealed class SimulationApiTests(SimulationApiFixture fixture) : IClassFix
     {
         using var anonymous = fixture.Factory.CreateClient();
         Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync("/api/simulation/status")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync("/api/simulation/members")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync("/api/simulation/parking/status")).StatusCode);
         await using var disabledFactory = fixture.CreateFactory(enabled: false, clearanceSeconds: 30);
         using var admin = await AdministratorClient(disabledFactory);
         Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync("/api/simulation/status")).StatusCode);
@@ -301,8 +303,8 @@ public sealed class SimulationApiTests(SimulationApiFixture fixture) : IClassFix
         membership.Activate(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(30));
         db.Memberships.Add(membership);
         await db.SaveChangesAsync();
-        using var anonymous = fixture.Factory.CreateClient();
-        return (await anonymous.GetFromJsonAsync<SimulationMemberResponse[]>("/api/simulation/members"))!.Single(item => item.MemberId == user.Id);
+        using var administrator = await fixture.CreateAdministratorClientAsync();
+        return (await administrator.GetFromJsonAsync<SimulationMemberResponse[]>("/api/simulation/members"))!.Single(item => item.MemberId == user.Id);
     }
 
     private static async Task<HttpClient> AdministratorClient(WebApplicationFactory<Program> factory)

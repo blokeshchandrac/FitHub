@@ -41,6 +41,7 @@ services:
       Stripe__CheckoutCancelUrl: ${STRIPE_CHECKOUT_CANCEL_URL}
       PasswordReset__ExpiryMinutes: ${PASSWORD_RESET_EXPIRY_MINUTES:-30}
       PasswordReset__FrontendBaseUrl: ${FRONTEND_BASE_URL}
+      Email__Provider: Smtp
       Email__SmtpHost: mailpit
       Email__SmtpPort: 1025
       Email__UseTls: "false"

@@ -30,6 +30,7 @@ describe('authenticationInterceptor', () => {
     const apiCall = firstValueFrom(http.get('/api/health'));
     const apiRequest = controller.expectOne('/api/health');
     expect(apiRequest.request.headers.get('Authorization')).toBe('Bearer access-token');
+    expect(apiRequest.request.withCredentials).toBe(true);
     apiRequest.flush({ status: 'Healthy' });
     await apiCall;
 

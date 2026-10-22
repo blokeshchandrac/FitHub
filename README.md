@@ -19,6 +19,8 @@ FitHub is a modular fitness-club platform built as a Master's Software Engineeri
 - .NET SDK 10
 - Docker Desktop with Docker Compose
 
+Public deployment preparation and the required Render, Neon, Brevo and Stripe Test Mode dashboard steps are in the [Render + Neon deployment guide](docs/deployment/render-neon-deployment.md). Candidate URLs there are not considered live until public verification has been recorded.
+
 ## Start with Docker Compose
 
 Create a local environment file from the safe template and replace the database password, demo password, JWT signing key, and Stripe Sandbox placeholders:
@@ -152,7 +154,7 @@ npm start
 
 ### Smart Equipment Virtual Lab
 
-Open `http://localhost:4040/simulation` to choose a virtual lab. The existing smart-equipment lab is now at `/simulation/equipment`; use **Refresh Members** to load the minimum safe projection of existing development Member accounts, memberships, and card status. Local Mode executes equipment rules in TypeScript; Connected Mode revalidates those development records and sends isolated events through `/api/simulation/events` and `/hubs/simulation`. Session-only status scenarios never update PostgreSQL. The 30-second clearance period can be changed with `SIMULATION_CLEARANCE_SECONDS` (1–60 for testing; use 30 for normal demonstrations).
+Open `http://localhost:4040/simulation` as an Administrator to choose a virtual lab. The smart-equipment lab is at `/simulation/equipment`; **Refresh Members** loads the minimum safe projection of synthetic Member accounts, memberships and card status. Local Mode remains browser-only. Connected Mode calls the normal equipment application service, persists accepted changes in PostgreSQL and listens on `/hubs/equipment`, so the simulator and operational pages share one authoritative state. The 30-second clearance period can be changed with `SIMULATION_CLEARANCE_SECONDS` (1–60 for testing; use 30 for normal demonstrations).
 
 The interactive smart-parking lab is at `http://localhost:4040/simulation/parking`. Add and drive up to six fictional cars, run the geometry-based virtual camera, test correct parking, two-space obstruction, camera failure and confidence handling. Local Mode never calls the API. Connected Mode requires a signed-in Administrator and persists only the twelve `P-A1`–`P-C4` development spaces plus deduplicated simulation alerts. Normal scans run every 60 seconds; Demo Speed runs every five seconds. The implementation is explicitly a geometry simulator, not real computer vision. See [Smart Parking Virtual Lab](docs/design/smart-parking-virtual-lab.md).
 
