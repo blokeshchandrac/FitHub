@@ -73,7 +73,7 @@ public sealed class Stage8AdministrationModulesTests:IAsyncLifetime
         await service.CreateFaultStatusAsync(user, enabledReport, "Cable machine", "Resolved");
         await service.CreateFaultStatusAsync(user, enabledReport, "Cable machine", "Resolved");
         var afterEnabled = await service.GetAsync(user, generateMemberNotifications: false);
-        Assert.Single(afterEnabled.Where(item => item.Message.Contains("Cable machine", StringComparison.Ordinal)));
+        Assert.Single(afterEnabled, item => item.Message.Contains("Cable machine", StringComparison.Ordinal));
 
         var stored = await scope.ServiceProvider.GetRequiredService<FitHubDbContext>().NotificationPreferences
             .SingleAsync(item => item.UserId == user && item.Category == NotificationType.FaultReportStatusUpdate);

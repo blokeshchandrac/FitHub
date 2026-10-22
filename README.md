@@ -14,7 +14,7 @@ FitHub is a modular fitness-club platform built as a Master's Software Engineeri
 
 ## Prerequisites
 
-- Node.js 22.22.3 or another version supported by Angular 22
+- Node.js 22.22.3 (the version pinned in `.nvmrc` and CI)
 - npm 10 or later
 - .NET SDK 10
 - Docker Desktop with Docker Compose
@@ -65,7 +65,7 @@ Start the frontend in another terminal:
 
 ```powershell
 Set-Location frontend/fithub-web
-npm install
+npm ci
 npm start
 ```
 
@@ -79,6 +79,8 @@ Set-Location frontend/fithub-web
 npm ci
 npm test -- --watch=false
 npm run build -- --configuration production
+npm audit --omit=dev
+npm audit
 ```
 
 Validate container configuration without starting services:
@@ -86,6 +88,8 @@ Validate container configuration without starting services:
 ```powershell
 docker compose --env-file .env.example config
 ```
+
+The production dependency audit is release-blocking at every severity because those packages can reach the shipped browser application. The complete audit is also reported so development and build-tool advisories remain visible. FitHub's frontend Docker image uses Node only in its build stage and serves the compiled application from Nginx; development tooling is not copied into the runtime image. The `anyComponentStyle` production budget is 8 kB warning/10 kB error because the two interactive Three.js laboratories require substantial component-scoped overlay and responsive-control styling; the verified styles remain below that deliberately narrow limit.
 
 ## Architecture rules
 
