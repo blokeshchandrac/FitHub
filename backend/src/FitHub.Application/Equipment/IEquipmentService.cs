@@ -11,6 +11,7 @@ public interface IEquipmentService
     Task DeviceClaimAsync(Guid equipmentId, string cardUid, CancellationToken cancellationToken = default);
     Task DeviceActionAsync(Guid equipmentId, string action, string? cardUid, CancellationToken cancellationToken = default);
     Task SensorAsync(Guid equipmentId, bool detected, CancellationToken cancellationToken = default);
+    Task<EquipmentDetailDto?> SensorAsync(Guid equipmentId, bool detected, DateTimeOffset observedAt, CancellationToken cancellationToken = default);
     Task<EquipmentDetailDto?> ConfirmClearanceAsync(Guid equipmentId, TimeSpan gracePeriod, CancellationToken cancellationToken = default);
     Task HeartbeatAsync(Guid equipmentId, CancellationToken cancellationToken = default);
     Task DisconnectAsync(Guid equipmentId, CancellationToken cancellationToken = default);

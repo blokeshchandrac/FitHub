@@ -66,14 +66,24 @@ public sealed class ConnectedEquipmentSimulationService(
                 ?? throw new KeyNotFoundException("The mapped equipment record no longer exists.");
             if (eventType == "NFC_TAPPED" && before.State == "SharingAllowed" && before.PartnerUserId.HasValue)
                 return await DeniedAsync(request, "SHARING_FULL", "Access denied — this machine already has its one sharing partner.", ct);
+
+            if (IsSensorEvent(eventType) && !IsPlausibleObservationTime(request.ObservedAt))
+                return await ResponseAsync(request, false, "STALE_SENSOR_EVENT",
+                    "The sensor observation timestamp is outside the accepted window and was ignored.",
+                    before, definition, clearanceGrace, ct);
+            if (IsSensorEvent(eventType) && before.PresenceChangedAt.HasValue && request.ObservedAt <= before.PresenceChangedAt.Value)
+                return await ResponseAsync(request, false, "STALE_SENSOR_EVENT",
+                    "An older or repeated sensor observation was ignored; persisted equipment state was not changed.",
+                    before, definition, clearanceGrace, ct);
+
             EquipmentDetailDto? changed = eventType switch
             {
                 "NFC_TAPPED" => await equipmentService.ClaimAsync(mapping.PersistedEquipmentId, member!.MemberId, ct),
                 "SHARING_ENABLED" => await equipmentService.AllowSharingAsync(mapping.PersistedEquipmentId, member!.MemberId, ct),
                 "SHARING_DISABLED" => await equipmentService.ReturnOccupiedAsync(mapping.PersistedEquipmentId, member!.MemberId, ct),
                 "SESSION_FINISHED" => await FinishAsync(before, member!.MemberId, ct),
-                "SENSOR_ZONE_EXITED" or "CLEARANCE_COUNTDOWN_STARTED" => await StartClearanceAsync(before, ct),
-                "SENSOR_ZONE_ENTERED" or "CLEARANCE_COUNTDOWN_CANCELLED" => await CancelClearanceAsync(before, ct),
+                "SENSOR_ZONE_EXITED" or "CLEARANCE_COUNTDOWN_STARTED" => await RecordPresenceAsync(before, detected: false, request.ObservedAt, ct),
+                "SENSOR_ZONE_ENTERED" or "CLEARANCE_COUNTDOWN_CANCELLED" => await RecordPresenceAsync(before, detected: true, request.ObservedAt, ct),
                 "AUTOMATIC_RELEASE_COMPLETED" => await equipmentService.ConfirmClearanceAsync(mapping.PersistedEquipmentId, clearanceGrace, ct),
                 "POWER_DISCONNECTED" or "SENSOR_DISCONNECTED" or "SENSOR_FAULT" => await DisconnectAsync(mapping.PersistedEquipmentId, ct),
                 "POWER_RECONNECTED" or "SENSOR_RECONNECTED" => await ReconnectAsync(mapping.PersistedEquipmentId, ct),
@@ -85,9 +95,15 @@ public sealed class ConnectedEquipmentSimulationService(
             if (changed is null)
                 return await DeniedAsync(request, "UNKNOWN_EVENT_TYPE", "The connected equipment event type is not supported.", ct);
 
-            var code = eventType == "NFC_TAPPED"
-                ? before.State == "SharingAllowed" ? "SECOND_MEMBER_JOINED" : "MACHINE_CLAIMED"
-                : eventType;
+            var code = eventType switch
+            {
+                "NFC_TAPPED" => before.State == "SharingAllowed" ? "SECOND_MEMBER_JOINED" : "MACHINE_CLAIMED",
+                "SENSOR_ZONE_EXITED" or "CLEARANCE_COUNTDOWN_STARTED" when before.PresenceDetected == false => "SENSOR_OBSERVATION_IGNORED",
+                "SENSOR_ZONE_ENTERED" or "CLEARANCE_COUNTDOWN_CANCELLED" when before.PresenceDetected == true => "SENSOR_OBSERVATION_IGNORED",
+                "SENSOR_ZONE_EXITED" or "CLEARANCE_COUNTDOWN_STARTED" when changed.State == "ClearanceWarning" => "CLEARANCE_COUNTDOWN_STARTED",
+                "SENSOR_ZONE_ENTERED" or "CLEARANCE_COUNTDOWN_CANCELLED" when before.State == "ClearanceWarning" => "CLEARANCE_COUNTDOWN_CANCELLED",
+                _ => eventType
+            };
             return await ResponseAsync(request, true, code, SuccessMessage(code), changed, definition, clearanceGrace, ct);
         }
         catch (UnauthorizedAccessException)
@@ -122,17 +138,8 @@ public sealed class ConnectedEquipmentSimulationService(
         return before;
     }
 
-    private async Task<EquipmentDetailDto?> StartClearanceAsync(EquipmentDetailDto before, CancellationToken ct)
-    {
-        if (before.State is "Occupied" or "SharingAllowed") await equipmentService.SensorAsync(before.Id, detected: false, ct);
-        return await equipmentService.GetAsync(before.Id, ct);
-    }
-
-    private async Task<EquipmentDetailDto?> CancelClearanceAsync(EquipmentDetailDto before, CancellationToken ct)
-    {
-        if (before.State == "ClearanceWarning") await equipmentService.SensorAsync(before.Id, detected: true, ct);
-        return await equipmentService.GetAsync(before.Id, ct);
-    }
+    private Task<EquipmentDetailDto?> RecordPresenceAsync(EquipmentDetailDto before, bool detected, DateTimeOffset observedAt, CancellationToken ct) =>
+        equipmentService.SensorAsync(before.Id, detected, observedAt, ct);
 
     private async Task<EquipmentDetailDto?> DisconnectAsync(Guid equipmentId, CancellationToken ct)
     {
@@ -179,7 +186,8 @@ public sealed class ConnectedEquipmentSimulationService(
             : null;
         return new SimulationEventResponse(allowed, code, message, request.SimulationSessionId,
             definition.SimulationEquipmentId, ToSimulationState(detail.State), names, remaining,
-            timeProvider.GetUtcNow(), detail.Id, detail.OwnerUserId, detail.PartnerUserId);
+            timeProvider.GetUtcNow(), detail.Id, detail.OwnerUserId, detail.PartnerUserId,
+            detail.PresenceDetected, detail.PresenceChangedAt);
     }
 
     private SimulationEquipmentMappingResponse Map(SimulationEquipmentDefinition definition, EquipmentDetailDto detail)
@@ -187,11 +195,22 @@ public sealed class ConnectedEquipmentSimulationService(
         var updatedAt = detail.History.FirstOrDefault()?.OccurredAt ?? timeProvider.GetUtcNow();
         return new(definition.SimulationEquipmentId, definition.DeviceId, detail.Id, detail.Code,
             ToSimulationState(detail.State), detail.OwnerUserId, detail.PartnerUserId,
+            detail.PresenceDetected, detail.PresenceChangedAt,
             detail.ClearanceGraceStartedAt, updatedAt);
     }
 
     private static bool RequiresMember(string eventType) => eventType is
         "NFC_TAPPED" or "SHARING_ENABLED" or "SHARING_DISABLED" or "SESSION_FINISHED";
+
+    private bool IsPlausibleObservationTime(DateTimeOffset observedAt)
+    {
+        var now = timeProvider.GetUtcNow();
+        return observedAt >= now.AddMinutes(-5) && observedAt <= now.AddSeconds(5);
+    }
+
+    private static bool IsSensorEvent(string eventType) => eventType is
+        "SENSOR_ZONE_EXITED" or "CLEARANCE_COUNTDOWN_STARTED" or
+        "SENSOR_ZONE_ENTERED" or "CLEARANCE_COUNTDOWN_CANCELLED";
 
     private static string SuccessMessage(string code) => code switch
     {
@@ -201,6 +220,7 @@ public sealed class ConnectedEquipmentSimulationService(
         "SHARING_DISABLED" => "Sharing is disabled and the machine is occupied by its owner.",
         "CLEARANCE_COUNTDOWN_STARTED" => "Clearance Warning started in the persisted equipment workflow.",
         "CLEARANCE_COUNTDOWN_CANCELLED" => "Clearance Warning was cancelled because an assigned Member returned.",
+        "SENSOR_OBSERVATION_IGNORED" => "The duplicate sensor observation was ignored without changing the clearance timer.",
         "AUTOMATIC_RELEASE_COMPLETED" => "The persisted equipment session was released after confirmed clearance.",
         _ => "The connected equipment event was accepted and persisted."
     };

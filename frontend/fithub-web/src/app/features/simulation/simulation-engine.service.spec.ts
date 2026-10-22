@@ -1,5 +1,5 @@
 import { SimulationEngineService } from './simulation-engine.service';
-import { SimulationMemberResponse } from './simulation.models';
+import { SimulationEquipmentState, SimulationEventResponse, SimulationMemberResponse } from './simulation.models';
 
 describe('SimulationEngineService', () => {
   let engine: SimulationEngineService;
@@ -54,6 +54,71 @@ describe('SimulationEngineService', () => {
     expect(engine.selectedMachine()?.state).toBe('SHARING_ALLOWED');
     engine.updateSensor('EQ-TREADMILL-01', 'AREA_CLEAR', 4, 200);
     expect(engine.selectedMachine()?.state).toBe('CLEARANCE_WARNING');
+  });
+
+  it('does not request connected clearance while one shared Member remains detected', () => {
+    share(engine);
+
+    expect(engine.observeConnectedSensor('EQ-TREADMILL-01', 'PERSON_DETECTED', 1.4, 90)).toMatchObject({ code: 'SENSOR_ZONE_ENTERED' });
+    expect(engine.observeConnectedSensor('EQ-TREADMILL-01', 'PERSON_DETECTED', 1.4, 100)).toBeNull();
+    expect(engine.selectedMachine()?.state).toBe('SHARING_ALLOWED');
+  });
+
+  it('submits one aggregate exit and waits for the authoritative warning state', () => {
+    share(engine);
+
+    expect(engine.observeConnectedSensor('EQ-TREADMILL-01', 'PERSON_DETECTED', 1.4, 50)).toMatchObject({ code: 'SENSOR_ZONE_ENTERED' });
+    expect(engine.observeConnectedSensor('EQ-TREADMILL-01', 'AREA_CLEAR', 4, 100)).toMatchObject({ code: 'SENSOR_ZONE_EXITED' });
+    expect(engine.observeConnectedSensor('EQ-TREADMILL-01', 'AREA_CLEAR', 4, 110)).toBeNull();
+    expect(engine.selectedMachine()?.state).toBe('SHARING_ALLOWED');
+
+    engine.reconcileConnectedMachine(connectedResponse('CLEARANCE_WARNING', MEMBERS[0].memberId, MEMBERS[1].memberId, 30, false));
+    expect(engine.selectedMachine()).toMatchObject({ state: 'CLEARANCE_WARNING', clearanceRemainingSeconds: 30 });
+  });
+
+  it('keeps the warning until the backend confirms a returning Member', () => {
+    share(engine);
+    engine.observeConnectedSensor('EQ-TREADMILL-01', 'AREA_CLEAR', 4, 50);
+    engine.reconcileConnectedMachine(connectedResponse('CLEARANCE_WARNING', MEMBERS[0].memberId, MEMBERS[1].memberId, 30, false));
+
+    expect(engine.observeConnectedSensor('EQ-TREADMILL-01', 'PERSON_DETECTED', 1.2, performance.now())).toMatchObject({ code: 'SENSOR_ZONE_ENTERED' });
+    expect(engine.selectedMachine()?.state).toBe('CLEARANCE_WARNING');
+    engine.reconcileConnectedMachine(connectedResponse('SHARING_ALLOWED', MEMBERS[0].memberId, MEMBERS[1].memberId, null, true));
+    expect(engine.selectedMachine()?.state).toBe('SHARING_ALLOWED');
+  });
+
+  it('requests connected automatic release once without clearing assignments optimistically', () => {
+    share(engine);
+    engine.observeConnectedSensor('EQ-TREADMILL-01', 'AREA_CLEAR', 4, 50);
+    engine.reconcileConnectedMachine(connectedResponse('CLEARANCE_WARNING', MEMBERS[0].memberId, MEMBERS[1].memberId, 1, false));
+    const afterDeadline = performance.now() + 1_100;
+
+    expect(engine.observeConnectedSensor('EQ-TREADMILL-01', 'AREA_CLEAR', 4, afterDeadline)).toMatchObject({ code: 'AUTOMATIC_RELEASE_COMPLETED' });
+    expect(engine.observeConnectedSensor('EQ-TREADMILL-01', 'AREA_CLEAR', 4, afterDeadline + 10)).toBeNull();
+    expect(engine.selectedMachine()).toMatchObject({ state: 'CLEARANCE_WARNING', memberIds: [MEMBERS[0].memberId, MEMBERS[1].memberId] });
+
+    engine.reconcileConnectedMachine(connectedResponse('AVAILABLE', null, null, null, false));
+    expect(engine.selectedMachine()).toMatchObject({ state: 'AVAILABLE', memberIds: [] });
+  });
+
+  it('does not move assigned avatars during connected reconciliation', () => {
+    share(engine);
+    engine.moveMember(MEMBERS[0].memberId, 7, 5.5);
+    const position = engine.members().find(member => member.id === MEMBERS[0].memberId)!.position;
+
+    engine.reconcileConnectedMachine(connectedResponse('CLEARANCE_WARNING', MEMBERS[0].memberId, MEMBERS[1].memberId, 30, false));
+
+    expect(engine.members().find(member => member.id === MEMBERS[0].memberId)?.position).toEqual(position);
+  });
+
+  it('does not turn an older persisted sensor snapshot into a duplicate physical event', () => {
+    share(engine);
+    expect(engine.observeConnectedSensor('EQ-TREADMILL-01', 'PERSON_DETECTED', 1.2, 100)).toMatchObject({ code: 'SENSOR_ZONE_ENTERED' });
+
+    engine.reconcileConnectedMachine(connectedResponse('SHARING_ALLOWED', MEMBERS[0].memberId, MEMBERS[1].memberId, null, false));
+
+    expect(engine.observeConnectedSensor('EQ-TREADMILL-01', 'PERSON_DETECTED', 1.2, 110)).toBeNull();
+    expect(engine.selectedMachine()?.sensorResult).toBe('PERSON_DETECTED');
   });
 
   it('lets a sharing partner finish while the owner continues in sharing mode', () => {
@@ -121,4 +186,37 @@ function enterAndTake(engine: SimulationEngineService, member: SimulationMemberR
 function claim(engine: SimulationEngineService, member: SimulationMemberResponse): void {
   enterAndTake(engine, member);
   expect(engine.scanMachine(member.cardId, 'EQ-TREADMILL-01').allowed).toBe(true);
+}
+
+function share(engine: SimulationEngineService): void {
+  claim(engine, MEMBERS[0]);
+  engine.returnCard(MEMBERS[0].memberId);
+  expect(engine.enableSharing('EQ-TREADMILL-01').allowed).toBe(true);
+  enterAndTake(engine, MEMBERS[1]);
+  expect(engine.scanMachine(MEMBERS[1].cardId, 'EQ-TREADMILL-01').allowed).toBe(true);
+}
+
+function connectedResponse(
+  equipmentState: SimulationEquipmentState,
+  ownerMemberId: string | null,
+  partnerMemberId: string | null,
+  clearanceSecondsRemaining: number | null,
+  presenceDetected: boolean | null,
+): SimulationEventResponse {
+  return {
+    allowed: true,
+    code: 'TEST_RECONCILIATION',
+    message: 'Authoritative test response.',
+    simulationSessionId: 'SIM-TEST',
+    equipmentId: 'EQ-TREADMILL-01',
+    equipmentState,
+    memberNames: [],
+    clearanceSecondsRemaining,
+    occurredAt: new Date().toISOString(),
+    persistedEquipmentId: '11111111-aaaa-bbbb-cccc-111111111111',
+    ownerMemberId,
+    partnerMemberId,
+    presenceDetected,
+    presenceChangedAt: new Date().toISOString(),
+  };
 }

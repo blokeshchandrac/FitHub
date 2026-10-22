@@ -42,6 +42,8 @@ export class SimulationEngineService {
 
   private eventSequence = 0;
   private readonly restartTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly connectedReleasePending = new Set<string>();
+  private readonly connectedSensorObservations = new Map<string, SimulationSensorResult>();
   private signalTimer?: ReturnType<typeof setTimeout>;
 
   constructor() {
@@ -241,28 +243,92 @@ export class SimulationEngineService {
     const memberIds = [ownerMemberId, partnerMemberId].filter((id): id is string => Boolean(id));
     const state = 'state' in source ? source.state : source.equipmentState;
     const clearanceStartedAt = 'clearanceStartedAt' in source ? source.clearanceStartedAt : null;
+    const currentMachine = this.machine(machineId);
     const remaining = state === 'CLEARANCE_WARNING'
       ? 'clearanceSecondsRemaining' in source && source.clearanceSecondsRemaining !== null
         ? source.clearanceSecondsRemaining
         : Math.max(0, Math.ceil(((clearanceStartedAt ? Date.parse(clearanceStartedAt) : Date.now()) + this.clearanceSeconds() * 1000 - Date.now()) / 1000))
       : null;
+    const physicalObservation = memberIds.length ? this.connectedSensorObservations.get(machineId) : undefined;
+    const sensorResult = !memberIds.length
+      ? 'AREA_CLEAR'
+      : physicalObservation
+      ?? (source.presenceDetected === true
+        ? 'PERSON_DETECTED'
+        : source.presenceDetected === false
+          ? 'AREA_CLEAR'
+          : state === 'CLEARANCE_WARNING'
+            ? 'AREA_CLEAR'
+            : currentMachine?.memberIds.length
+              ? currentMachine.sensorResult
+              : memberIds.length
+                ? 'PERSON_DETECTED'
+                : currentMachine?.sensorResult ?? 'AREA_CLEAR');
     this.updateMachine(machineId, current => ({
       ...current,
       state,
       memberIds,
       safetyLocked: state === 'TEMPORARILY_UNAVAILABLE',
-      sensorResult: state === 'CLEARANCE_WARNING' ? 'AREA_CLEAR' : memberIds.length ? 'PERSON_DETECTED' : current.sensorResult,
+      sensorResult,
       activeStateBeforeClearance: state === 'CLEARANCE_WARNING' ? memberIds.length > 1 ? 'SHARING_ALLOWED' : 'OCCUPIED' : null,
       clearanceDeadlineMs: remaining === null ? null : performance.now() + remaining * 1000,
       clearanceRemainingSeconds: remaining,
     }));
+    if (!memberIds.length) this.connectedSensorObservations.delete(machineId);
+    if (state !== 'CLEARANCE_WARNING' || (remaining !== null && remaining > 0)) this.connectedReleasePending.delete(machineId);
     this.members.update(members => members.map(member => {
       if (memberIds.includes(member.id)) {
         const machine = this.machine(machineId);
-        return { ...member, entered: true, machineId, position: machine ? { x: machine.position.x, z: machine.position.z + 1.6 } : member.position };
+        // Reconciliation must not teleport an already assigned avatar back into the sensor zone.
+        // That would turn a backend refresh into a false physical return observation.
+        const position = member.machineId === machineId || !machine
+          ? member.position
+          : { x: machine.position.x, z: machine.position.z + 1.6 };
+        return { ...member, entered: true, machineId, position };
       }
       return member.machineId === machineId ? { ...member, machineId: null } : member;
     }));
+  }
+
+  observeConnectedSensor(machineId: string, sensorResult: SimulationSensorResult, distanceMetres: number, nowMs: number): SimulationDecision | null {
+    const machine = this.machine(machineId);
+    if (!machine) return null;
+    if (!this.sensorConnected(machine) || !this.powerConnected(machine)) sensorResult = 'SENSOR_FAULT';
+    const distance = Math.max(0, Math.min(20, distanceMetres));
+    // Physical observations are tracked separately from the persisted snapshot. SignalR can
+    // legitimately deliver the preceding database state while a newer sensor request is queued;
+    // treating that snapshot as a new physical reading caused duplicate exit/enter events.
+    const previousPhysicalResult = this.connectedSensorObservations.get(machineId);
+    const resultChanged = previousPhysicalResult !== sensorResult;
+    this.connectedSensorObservations.set(machineId, sensorResult);
+
+    if (resultChanged) {
+      this.log(sensorResult === 'PERSON_DETECTED' ? 'SENSOR_ZONE_ENTERED' : sensorResult === 'AREA_CLEAR' ? 'SENSOR_ZONE_EXITED' : 'SENSOR_FAULT',
+        sensorResult, sensorResult === 'SENSOR_FAULT' ? 'error' : 'info',
+        sensorResult === 'PERSON_DETECTED' ? 'An assigned Member is inside the clearance zone.'
+          : sensorResult === 'AREA_CLEAR' ? 'All assigned Members are outside the clearance zone.'
+            : 'The clearance sensor is unavailable; automatic release is disabled.', machine.id);
+    }
+
+    let remaining = machine.clearanceRemainingSeconds;
+    if (machine.state === 'CLEARANCE_WARNING' && machine.clearanceDeadlineMs !== null && sensorResult === 'AREA_CLEAR')
+      remaining = Math.max(0, Math.ceil((machine.clearanceDeadlineMs - nowMs) / 1000));
+    this.updateMachine(machine.id, current => ({ ...current, sensorResult, distanceMetres: distance, clearanceRemainingSeconds: remaining }));
+
+    const activeSession = machine.memberIds.length > 0 && ['OCCUPIED', 'SHARING_ALLOWED', 'CLEARANCE_WARNING'].includes(machine.state);
+    if (!activeSession || sensorResult === 'SENSOR_FAULT')
+      return resultChanged && sensorResult === 'SENSOR_FAULT'
+        ? { allowed: true, code: 'SENSOR_FAULT', message: 'The sensor fault must be persisted before any release can occur.' }
+        : null;
+    if (resultChanged)
+      return sensorResult === 'PERSON_DETECTED'
+        ? { allowed: true, code: 'SENSOR_ZONE_ENTERED', message: 'An assigned Member entered the sensor zone.' }
+        : { allowed: true, code: 'SENSOR_ZONE_EXITED', message: 'All assigned Members left the sensor zone.' };
+    if (machine.state === 'CLEARANCE_WARNING' && sensorResult === 'AREA_CLEAR' && remaining === 0 && !this.connectedReleasePending.has(machine.id)) {
+      this.connectedReleasePending.add(machine.id);
+      return { allowed: true, code: 'AUTOMATIC_RELEASE_COMPLETED', message: 'The persisted clearance grace period is ready for backend confirmation.' };
+    }
+    return null;
   }
 
   moveMember(memberId: string, x: number, z: number): SimulationPosition | null {
@@ -403,6 +469,8 @@ export class SimulationEngineService {
     this.carriedCardId.set(null);
     this.showTapTargets.set(false);
     this.sessionId.set(createSessionId());
+    this.connectedReleasePending.clear();
+    this.connectedSensorObservations.clear();
     this.log('SIMULATION_RESET', 'RESET', 'info', 'Members retained from the development database; session overrides, assignments, timers, and hardware faults were cleared.');
   }
 
@@ -414,6 +482,8 @@ export class SimulationEngineService {
   dispose(): void {
     for (const timer of this.restartTimers.values()) clearTimeout(timer);
     if (this.signalTimer) clearTimeout(this.signalTimer);
+    this.connectedReleasePending.clear();
+    this.connectedSensorObservations.clear();
   }
 
   private validateMember(member: SimulationMember): SimulationDecision {

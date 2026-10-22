@@ -66,7 +66,26 @@ public sealed class EquipmentService(FitHubDbContext dbContext, IEquipmentRealti
         };
     }
 
-    public async Task SensorAsync(Guid equipmentId, bool detected, CancellationToken cancellationToken = default) => _ = await ChangeAsync(equipmentId, x => x.RecordPresence(detected, Now()), cancellationToken);
+    public async Task SensorAsync(Guid equipmentId, bool detected, CancellationToken cancellationToken = default) =>
+        _ = await SensorAsync(equipmentId, detected, Now(), cancellationToken);
+
+    public async Task<EquipmentDetailDto?> SensorAsync(Guid equipmentId, bool detected, DateTimeOffset observedAt, CancellationToken cancellationToken = default)
+    {
+        var equipment = await dbContext.Equipment.Include(x => x.StatusHistory).SingleOrDefaultAsync(x => x.Id == equipmentId, cancellationToken);
+        if (equipment is null) return null;
+        var statusEvent = equipment.RecordPresence(detected, observedAt);
+        if (statusEvent is null)
+        {
+            // Duplicate readings advance only the persisted observation watermark. They do not
+            // restart grace time, add history, or publish a misleading state transition.
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        else
+        {
+            await SaveAndNotifyAsync(equipment, cancellationToken);
+        }
+        return Map(equipment);
+    }
 
     public Task<EquipmentDetailDto?> ConfirmClearanceAsync(Guid equipmentId, TimeSpan gracePeriod, CancellationToken cancellationToken = default) =>
         ChangeAsync(equipmentId, x => x.ConfirmClearance(Now(), gracePeriod), cancellationToken);
@@ -136,5 +155,5 @@ public sealed class EquipmentService(FitHubDbContext dbContext, IEquipmentRealti
         EquipmentState.Maintenance or EquipmentState.Offline => "grey",
         _ => "grey"
     };
-    private static EquipmentDetailDto Map(Domain.Equipment.Equipment x) => new(x.Id, x.Code, x.Name, x.Description, x.Location, x.CurrentState.ToString(), Color(x.CurrentState), x.OwnerUserId, x.PartnerUserId, x.PresenceDetected, x.ClearanceGraceStartedAt, x.Version, x.StatusHistory.OrderByDescending(h => h.OccurredAt).Select(h => new EquipmentHistoryDto(h.Id, h.PreviousState.ToString(), h.State.ToString(), h.EventType.ToString(), h.OccurredAt, h.ChangedByUserId, h.Note)).ToList());
+    private static EquipmentDetailDto Map(Domain.Equipment.Equipment x) => new(x.Id, x.Code, x.Name, x.Description, x.Location, x.CurrentState.ToString(), Color(x.CurrentState), x.OwnerUserId, x.PartnerUserId, x.PresenceDetected, x.PresenceChangedAt, x.ClearanceGraceStartedAt, x.Version, x.StatusHistory.OrderByDescending(h => h.OccurredAt).Select(h => new EquipmentHistoryDto(h.Id, h.PreviousState.ToString(), h.State.ToString(), h.EventType.ToString(), h.OccurredAt, h.ChangedByUserId, h.Note)).ToList());
 }

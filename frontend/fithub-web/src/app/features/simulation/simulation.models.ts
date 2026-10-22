@@ -102,6 +102,8 @@ export interface SimulationEquipmentMapping {
   readonly state: SimulationEquipmentState;
   readonly ownerMemberId: string | null;
   readonly partnerMemberId: string | null;
+  readonly presenceDetected: boolean | null;
+  readonly presenceChangedAt: string | null;
   readonly clearanceStartedAt: string | null;
   readonly lastUpdatedAt: string;
 }
@@ -139,6 +141,8 @@ export interface SimulationEventResponse extends SimulationDecision {
   readonly persistedEquipmentId: string | null;
   readonly ownerMemberId: string | null;
   readonly partnerMemberId: string | null;
+  readonly presenceDetected: boolean | null;
+  readonly presenceChangedAt: string | null;
 }
 
 export interface SceneHit {

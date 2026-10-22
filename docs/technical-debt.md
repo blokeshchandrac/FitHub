@@ -15,4 +15,5 @@ This list records current, factual release limitations. Historical Phase 2 resul
 
 - GAP-001 / FR-01: registration now requires explicit consent and stores backend-controlled timestamp/version evidence.
 - DEF-005 / FR-13: every workout set now has a distinct nullable rest-time field, validation, persistence and history display.
+- DEF-004 / FR-23–FR-24: Connected Mode now keeps physical sensor observations separate from persisted SignalR snapshots, orders observations per machine, ignores duplicate/stale readings, and releases shared equipment only after one uninterrupted 30-second clear period.
 - Monthly membership source data now uses EUR 29.90; checkout conversion and confirmed-payment revenue use the server-stored amount.
