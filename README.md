@@ -19,7 +19,12 @@ FitHub is a modular fitness-club platform built as a Master's Software Engineeri
 - .NET SDK 10
 - Docker Desktop with Docker Compose
 
-Public deployment preparation and the required Render, Neon, Brevo and Stripe Test Mode dashboard steps are in the [Render + Neon deployment guide](docs/deployment/render-neon-deployment.md). Candidate URLs there are not considered live until public verification has been recorded.
+The public Phase 3 deployment is available at:
+
+- Web application: `https://fithub-web-10252426.onrender.com`
+- API health: `https://fithub-api-10252426.onrender.com/health`
+
+Render, Neon, Brevo and Stripe Test Mode configuration and recovery procedures are documented in the [Render + Neon deployment guide](docs/deployment/render-neon-deployment.md). Factual deployment checks are recorded separately in [the Phase 3 public-deployment evidence](docs/testing/evidence/phase3/public-deployment-verification.log).
 
 ## Start with Docker Compose
 

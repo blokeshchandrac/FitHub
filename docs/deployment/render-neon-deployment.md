@@ -28,16 +28,16 @@ The Blueprint is [`render.yaml`](../../render.yaml). PostgreSQL is not run in th
 
 No provider secret belongs in Git, Angular, documentation, screenshots, or chat.
 
-## Planned service names
+## Deployed service names
 
-The Blueprint requests `fithub-api-10252426` and `fithub-web-10252426`. Confirm both in the Render Blueprint preview before creating resources. If Render assigns different names, update the API URL, frontend URL, CORS origin, reset URL, Stripe URLs and static-site CSP before deploying.
+The Blueprint requests and the verified public deployment uses `fithub-api-10252426` and `fithub-web-10252426`. A future deployment that uses different names must also update the API URL, frontend URL, CORS origin, reset URL, Stripe URLs and static-site CSP.
 
-- Frontend candidate: `https://fithub-web-10252426.onrender.com`
-- API candidate: `https://fithub-api-10252426.onrender.com`
-- Health candidate: `https://fithub-api-10252426.onrender.com/health`
-- Stripe webhook candidate: `https://fithub-api-10252426.onrender.com/api/payments/stripe/webhook`
+- Frontend: `https://fithub-web-10252426.onrender.com`
+- API: `https://fithub-api-10252426.onrender.com`
+- Health: `https://fithub-api-10252426.onrender.com/health`
+- Stripe webhook: `https://fithub-api-10252426.onrender.com/api/payments/stripe/webhook`
 
-These are configuration targets, not verified live URLs, until deployment evidence records successful responses.
+These URLs were verified on 24 October 2026. See the [public-deployment evidence](../testing/evidence/phase3/public-deployment-verification.log) for the deployed commit, database, authentication, SignalR and Stripe results.
 
 ## Create Neon PostgreSQL
 
