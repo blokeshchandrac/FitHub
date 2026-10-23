@@ -62,8 +62,8 @@ public static class DependencyInjection
         services.AddDbContext<FitHubDbContext>(options => options.UseNpgsql(connectionString, npgsql =>
         {
             // Neon can briefly reject connections while a suspended compute endpoint wakes.
-            // Keep retries production-only because EF's retry strategy cannot wrap the
-            // user-managed transactions used by the integration test fixtures.
+            // Services that open transactions execute the complete transaction through
+            // EF's execution strategy so retries preserve their atomic business rules.
             if (enableDatabaseRetry)
                 npgsql.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), errorCodesToAdd: null);
         }));
