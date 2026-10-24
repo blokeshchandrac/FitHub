@@ -2,7 +2,9 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FitHub.Application.Authentication;
+using FitHub.Application.Equipment;
 using FitHub.Application.Payments;
+using FitHub.Domain.Equipment;
 using FitHub.Domain.Identity;
 using FitHub.Domain.Memberships;
 using FitHub.Domain.Payments;
@@ -428,6 +430,50 @@ public sealed class AuthenticationApiTests : IAsyncLifetime
             new StringContent(string.Empty));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ActiveMemberCanReadLiveEquipmentAndNegotiateEquipmentHubWithoutCheckIn()
+    {
+        var equipment = new Equipment($"LIVE-{Guid.NewGuid():N}", "Live equipment");
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<FitHubDbContext>();
+            db.Equipment.Add(equipment);
+            await db.SaveChangesAsync();
+        }
+
+        using var client = CreateClient();
+        var token = await LoginAndGetAccessTokenAsync(client, "member.auth@fithub.test");
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        using var listResponse = await client.GetAsync("/api/equipment");
+        var items = await listResponse.Content.ReadFromJsonAsync<IReadOnlyCollection<EquipmentSummaryDto>>();
+        using var negotiationResponse = await client.PostAsync(
+            $"/hubs/equipment/negotiate?negotiateVersion=1&access_token={Uri.EscapeDataString(token)}",
+            new StringContent(string.Empty));
+
+        Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
+        var liveItem = Assert.Single(items!, item => item.Id == equipment.Id);
+        Assert.True(liveItem.LiveDetailsAvailable);
+        Assert.Equal(EquipmentState.Available.ToString(), liveItem.State);
+        Assert.Equal(HttpStatusCode.OK, negotiationResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task MemberWithoutMembershipCannotReadLiveEquipmentOrNegotiateEquipmentHub()
+    {
+        using var client = CreateClient();
+        var token = await LoginAndGetAccessTokenAsync(client, "no-membership.auth@fithub.test");
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        using var listResponse = await client.GetAsync("/api/equipment");
+        using var negotiationResponse = await client.PostAsync(
+            $"/hubs/equipment/negotiate?negotiateVersion=1&access_token={Uri.EscapeDataString(token)}",
+            new StringContent(string.Empty));
+
+        Assert.Equal(HttpStatusCode.Forbidden, listResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, negotiationResponse.StatusCode);
     }
 
     [Fact]
