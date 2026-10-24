@@ -126,9 +126,10 @@ public sealed class ClassBookingService(
             if (book)
             {
                 var confirmed = schedule.Bookings.Count(x => x.Status == BookingStatus.Confirmed);
-                var status = confirmed < schedule.Capacity ? BookingStatus.Confirmed : BookingStatus.Waitlisted;
-                if (mine is null) { mine = new ClassBooking(schedule.Id, userId, status, now); schedule.Bookings.Add(mine); }
-                else mine.Rebook(status, now);
+                if (confirmed >= schedule.Capacity)
+                    throw new InvalidOperationException("This class is full.");
+                if (mine is null) { mine = new ClassBooking(schedule.Id, userId, BookingStatus.Confirmed, now); schedule.Bookings.Add(mine); }
+                else mine.Rebook(BookingStatus.Confirmed, now);
             }
             else
             {
