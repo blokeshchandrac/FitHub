@@ -49,6 +49,7 @@ public sealed class Stage6EquipmentTests : IAsyncLifetime
     {
         var id=await AddEquipment(); var userId=await AddUser(); await using var scope=factory.Services.CreateAsyncScope(); var service=scope.ServiceProvider.GetRequiredService<IFaultReportService>();
         await Assert.ThrowsAsync<ArgumentException>(()=>service.CreateAsync(userId,new(id,"Other",null,false,null)));
+        await Assert.ThrowsAsync<ArgumentException>(()=>service.CreateAsync(userId,new(id,"SafetyConcern","  ",false,null)));
         await Assert.ThrowsAsync<ArgumentException>(()=>service.CreateAsync(userId,new(id,"BrokenPart","bad file",false,new(new MemoryStream([1]),"bad.exe","application/octet-stream",1))));
         await Assert.ThrowsAsync<ArgumentException>(()=>service.CreateAsync(userId,new(id,"BrokenPart","too large",false,new(new MemoryStream([1]),"large.jpg","image/jpeg",5L*1024*1024+1))));
         await Assert.ThrowsAsync<ArgumentException>(()=>service.CreateAsync(userId,new(id,"BrokenPart","spoofed",false,new(new MemoryStream([1,2,3,4,5,6,7,8]),"spoof.png","image/png",8))));
