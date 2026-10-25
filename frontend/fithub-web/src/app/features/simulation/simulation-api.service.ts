@@ -4,6 +4,7 @@ import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } fro
 import { firstValueFrom } from 'rxjs';
 import { AuthenticationService } from '../../core/authentication/authentication.service';
 import { EquipmentChanged } from '../../core/equipment/equipment.models';
+import { RuntimeConfigService } from '../../core/configuration/runtime-config.service';
 import {
   SimulationBackendStatus,
   SimulationConnectionState,
@@ -17,6 +18,7 @@ import {
 export class SimulationApiService {
   private readonly http = inject(HttpClient);
   private readonly authentication = inject(AuthenticationService);
+  private readonly runtimeConfig = inject(RuntimeConfigService);
   private connection?: HubConnection;
   readonly backendState = signal<SimulationConnectionState>('disconnected');
   readonly signalRState = signal<SimulationConnectionState>('disconnected');
@@ -60,7 +62,7 @@ export class SimulationApiService {
     this.signalRState.set('connecting');
     this.connectionMessage.set('API verified. Connecting to EquipmentHub…');
     const connection = new HubConnectionBuilder()
-      .withUrl(hubUrl, { accessTokenFactory: () => this.authentication.accessToken() ?? '' })
+      .withUrl(this.runtimeConfig.hubUrl(hubUrl), { accessTokenFactory: () => this.authentication.accessToken() ?? '', withCredentials: true })
       .withAutomaticReconnect()
       .configureLogging(LogLevel.Warning)
       .build();
@@ -103,6 +105,16 @@ export class SimulationApiService {
 
   getEquipment(): Promise<readonly SimulationEquipmentMapping[]> {
     return firstValueFrom(this.http.get<readonly SimulationEquipmentMapping[]>('/api/simulation/equipment'));
+  }
+
+  submissionFailure(error: unknown): { allowed: false; code: string; message: string } {
+    if (!(error instanceof HttpErrorResponse) || error.status === 0)
+      return { allowed: false, code: 'BACKEND_UNAVAILABLE', message: 'Connected event was not applied because the simulation backend could not be reached.' };
+    if (error.status === 401)
+      return { allowed: false, code: 'AUTHENTICATION_REQUIRED', message: 'The Administrator session expired; reconnect before submitting more equipment events.' };
+    if (error.status === 403)
+      return { allowed: false, code: 'ADMINISTRATOR_REQUIRED', message: 'Administrator permission is required for connected equipment events.' };
+    return { allowed: false, code: 'BACKEND_REJECTED', message: `The backend rejected the equipment event (${error.status}); persisted state was not changed.` };
   }
 
   async disconnectHub(showMessage = true, preserveBackend = false): Promise<void> {

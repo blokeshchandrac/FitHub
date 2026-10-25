@@ -8,8 +8,8 @@ public sealed class FaultReport : Entity
     private FaultReport() { }
     public FaultReport(Guid equipmentId, Guid reportedByUserId, FaultCategory category, string? comment, bool seriousSafetyConcern)
     {
-        if (category == FaultCategory.Other && string.IsNullOrWhiteSpace(comment))
-            throw new ArgumentException("A comment is required when the category is Other.", nameof(comment));
+        if (string.IsNullOrWhiteSpace(comment))
+            throw new ArgumentException("A comment is required for every fault report.", nameof(comment));
         if (seriousSafetyConcern && category != FaultCategory.SafetyConcern)
             throw new ArgumentException("Only a safety concern can be marked as serious.", nameof(seriousSafetyConcern));
         EquipmentId = equipmentId;

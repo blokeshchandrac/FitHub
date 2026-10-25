@@ -108,36 +108,44 @@ public sealed class ClassBookingService(
 
     private async Task<ClassScheduleDto?> ChangeLocked(Guid id, Guid userId, bool book, CancellationToken ct)
     {
-        await using var transaction = await db.Database.BeginTransactionAsync(ct);
-        var schedule = await db.ClassSchedules.FromSql($"SELECT * FROM \"ClassSchedules\" WHERE \"Id\" = {id} FOR UPDATE")
-            .Include(x => x.InstructorUser).SingleOrDefaultAsync(ct);
-        if (schedule is null) return null;
-        await db.Entry(schedule).Collection(x => x.Bookings).LoadAsync(ct);
-        var now = timeProvider.GetUtcNow();
-        if (schedule.Status != ClassScheduleStatus.Approved) throw new InvalidOperationException("Only an approved class can be booked.");
-        if (schedule.StartsAt <= now) throw new InvalidOperationException("This class has already started.");
-        var mine = schedule.Bookings.SingleOrDefault(x => x.UserId == userId);
-        if (book)
+        var strategy = db.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
         {
-            var confirmed = schedule.Bookings.Count(x => x.Status == BookingStatus.Confirmed);
-            var status = confirmed < schedule.Capacity ? BookingStatus.Confirmed : BookingStatus.Waitlisted;
-            if (mine is null) { mine = new ClassBooking(schedule.Id, userId, status, now); schedule.Bookings.Add(mine); }
-            else mine.Rebook(status, now);
-        }
-        else
-        {
-            if (mine is null || mine.Status == BookingStatus.Cancelled) throw new InvalidOperationException("No active booking exists.");
-            var released = mine.Status == BookingStatus.Confirmed;
-            mine.Cancel(now);
-            if (released)
+            // Neon retry must encompass the row lock, state transition and commit as one unit.
+            // Clearing tracked state makes a retry reload the authoritative persisted booking.
+            db.ChangeTracker.Clear();
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            var schedule = await db.ClassSchedules.FromSql($"SELECT * FROM \"ClassSchedules\" WHERE \"Id\" = {id} FOR UPDATE")
+                .Include(x => x.InstructorUser).SingleOrDefaultAsync(ct);
+            if (schedule is null) return null;
+            await db.Entry(schedule).Collection(x => x.Bookings).LoadAsync(ct);
+            var now = timeProvider.GetUtcNow();
+            if (schedule.Status != ClassScheduleStatus.Approved) throw new InvalidOperationException("Only an approved class can be booked.");
+            if (schedule.StartsAt <= now) throw new InvalidOperationException("This class has already started.");
+            var mine = schedule.Bookings.SingleOrDefault(x => x.UserId == userId);
+            if (book)
             {
-                var next = schedule.Bookings.Where(x => x.Status == BookingStatus.Waitlisted).OrderBy(x => x.BookedAt).FirstOrDefault();
-                next?.Promote(now);
+                var confirmed = schedule.Bookings.Count(x => x.Status == BookingStatus.Confirmed);
+                if (confirmed >= schedule.Capacity)
+                    throw new InvalidOperationException("This class is full.");
+                if (mine is null) { mine = new ClassBooking(schedule.Id, userId, BookingStatus.Confirmed, now); schedule.Bookings.Add(mine); }
+                else mine.Rebook(BookingStatus.Confirmed, now);
             }
-        }
-        await db.SaveChangesAsync(ct);
-        await transaction.CommitAsync(ct);
-        return Map(schedule, userId);
+            else
+            {
+                if (mine is null || mine.Status == BookingStatus.Cancelled) throw new InvalidOperationException("No active booking exists.");
+                var released = mine.Status == BookingStatus.Confirmed;
+                mine.Cancel(now);
+                if (released)
+                {
+                    var next = schedule.Bookings.Where(x => x.Status == BookingStatus.Waitlisted).OrderBy(x => x.BookedAt).FirstOrDefault();
+                    next?.Promote(now);
+                }
+            }
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            return Map(schedule, userId);
+        });
     }
 
     private IQueryable<ClassSchedule> Query() => db.ClassSchedules.Include(x => x.InstructorUser).Include(x => x.Bookings);

@@ -1,0 +1,22 @@
+TC-02 manual evidence — Membership plan, Stripe Test Mode payment and payment record
+Date: 2026-09-16
+
+Account: phase2.registration.20260916@fithub.test
+Selected plan: Monthly
+Displayed/server price: EUR 29.90
+Duration: 1 month
+Description: Flexible monthly membership
+Stripe input: standard successful Test Mode Visa ending 4242, a future expiry, and a synthetic CVC.
+
+Observed:
+- /membership/choose displayed Monthly EUR 29.90 and Annual EUR 499.00.
+- Stripe-hosted Sandbox Checkout displayed Monthly EUR 29.90.
+- Successful payment returned to FitHub and the backend-confirmed membership became Active.
+- Membership start: 2026-09-16T21:10:30.140392Z.
+- Membership end: 2026-10-16T21:10:30.140392Z.
+- Payment history displayed Succeeded / EUR 29.90 / Purchase.
+- PostgreSQL contained one non-demo Succeeded payment for EUR 29.90 and a matching Active membership.
+- No card number or CVC was stored by FitHub.
+
+Decision: PASS
+Defect reference: none.

@@ -1,5 +1,11 @@
 # FitHub Stage 9 test results
 
+## Phase 3 final release verification - 25 October 2026
+
+The final executable release at `fb429cd4ff663fc46436f9fb812ec0b1fe879818` passed **119 backend unit tests**, **95 PostgreSQL integration tests**, **142 Angular tests across 46 files**, **2 equipment-simulator tests**, and **2 parking-simulator tests**. Backend Release and Angular production builds, npm production/full audits, NuGet vulnerability review and Docker Compose validation passed in GitHub Actions. The final acceptance campaign recorded **9 Passed, 0 Failed, 0 Blocked**.
+
+The final evidence is in [the acceptance summary](evidence/phase3/final-acceptance/final-acceptance-summary.md). Earlier totals below are retained as dated historical checkpoints and must not be read as the current release count.
+
 ## Role and workflow stabilization — 1 September 2026
 
 The role/workflow correction verified **210 automated tests** with no failures: 91 backend unit, 71 PostgreSQL integration/API, 44 Angular, 2 equipment-simulator, and 2 parking-simulator tests. After the final class-audit and capacity safeguard, the affected Stage 8 integration group was rerun separately (3/3 passed). Backend and Angular Release/production builds, Docker image builds, Compose validation, PostgreSQL readiness, API health, frontend HTTP 200, role-route HTTP checks, and the tracked-file credential scan passed.

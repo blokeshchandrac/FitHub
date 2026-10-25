@@ -1,0 +1,22 @@
+FitHub Phase 3 evidence — FR-01 registration consent
+Execution date: 2026-10-21 (Europe/Berlin)
+Environment: Windows local development; Angular http://localhost:4041; ASP.NET Core http://127.0.0.1:5081; PostgreSQL development database plus Testcontainers PostgreSQL integration suite.
+Test account: phase3.acceptance.20261021@fithub.test (synthetic Member; no password recorded in this evidence file).
+
+Expected result
+- Consent starts unselected and registration cannot be submitted while it is false.
+- Terms of Use and Privacy Notice open real public routes.
+- Accepted consent is timestamped and versioned by the backend, not supplied by the browser.
+
+Actual result
+- Browser: the registration checkbox started unselected.
+- Browser: leaving consent false displayed “You must accept the Terms of Use and acknowledge the Privacy Notice to register” and the form remained on /register without creating an account.
+- Browser: /terms and /privacy loaded the academic-demonstration notices.
+- API/PostgreSQL: synthetic registration persisted ConsentAcceptedAtUtc and ConsentVersion=1.0. The backend generated both values.
+- Existing development database query: ConsentVersion returned 1.0 and ConsentAcceptedAtUtc IS NOT NULL returned true for the synthetic account.
+- Automated verification: AuthenticationApiTests covered missing consent, false consent, successful true consent, stored timestamp/version, and unchanged duplicate-email protection.
+- Angular verification: registration tests covered requiredTrue, default false, request mapping, and the Terms/Privacy routes.
+
+Decision: PASSED for implementation. The final account-creation click was not repeated through browser automation because account creation requires action-time confirmation; successful registration and database persistence were verified through the API integration workflow.
+Build/test corroboration: backend unit 109/109; PostgreSQL integration 85/85; Angular 118/118; production build passed; Docker Compose API health and frontend returned HTTP 200.
+Related historical gap: GAP-001. Historical Phase 2 evidence remains unchanged.

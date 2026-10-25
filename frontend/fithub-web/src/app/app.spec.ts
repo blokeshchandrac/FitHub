@@ -27,6 +27,7 @@ describe('FitHub layouts', () => {
     expect(fixture.nativeElement.querySelector('aside')).toBeTruthy();
     expect(fixture.nativeElement.textContent).toContain('Dashboard');
     expect(fixture.nativeElement.textContent).toContain('Notifications');
+    expect(fixture.nativeElement.textContent).toContain('Notification preferences');
   });
 
   it('renders administration navigation without personal member features', () => {
@@ -39,6 +40,7 @@ describe('FitHub layouts', () => {
     expect(text).not.toContain('Class booking');
     expect(text).not.toContain('Recommendations');
     expect(text).not.toContain('Progress');
+    expect(text).not.toContain('Notification preferences');
     const virtualLab = fixture.nativeElement.querySelector('.virtual-lab-action') as HTMLAnchorElement;
     expect(virtualLab).not.toBeNull();
     expect(virtualLab.getAttribute('href')).toBe('/simulation');
@@ -55,6 +57,7 @@ describe('FitHub layouts', () => {
     expect(text).toContain('Scanner / validator');
     expect(text).not.toContain('Users');
     expect(text).not.toContain('Payments / Revenue');
+    expect(text).not.toContain('Notification preferences');
     expect(fixture.nativeElement.querySelector('.virtual-lab-action')).toBeNull();
   });
 

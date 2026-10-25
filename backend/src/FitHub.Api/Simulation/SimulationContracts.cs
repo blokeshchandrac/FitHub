@@ -26,7 +26,9 @@ public sealed record SimulationEventResponse(
     DateTimeOffset OccurredAt,
     Guid? PersistedEquipmentId = null,
     Guid? OwnerMemberId = null,
-    Guid? PartnerMemberId = null);
+    Guid? PartnerMemberId = null,
+    bool? PresenceDetected = null,
+    DateTimeOffset? PresenceChangedAt = null);
 
 public sealed record SimulationStatusResponse(
     bool Enabled,
@@ -43,6 +45,8 @@ public sealed record SimulationEquipmentMappingResponse(
     string State,
     Guid? OwnerMemberId,
     Guid? PartnerMemberId,
+    bool? PresenceDetected,
+    DateTimeOffset? PresenceChangedAt,
     DateTimeOffset? ClearanceStartedAt,
     DateTimeOffset LastUpdatedAt);
 

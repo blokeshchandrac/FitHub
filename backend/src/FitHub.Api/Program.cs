@@ -5,12 +5,22 @@ using FitHub.Api.Realtime;
 using FitHub.Api.Simulation;
 using FitHub.Application.Equipment;
 using FitHub.Infrastructure.Payments;
+using FitHub.Infrastructure.Authentication;
+using FitHub.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+
+if (int.TryParse(builder.Configuration["PORT"], out var renderPort))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{renderPort}");
+}
+
+ProductionConfiguration.Validate(builder.Configuration, builder.Environment);
 
 builder.Services.AddControllers(options => options.Filters.Add<CommandValidationExceptionFilter>())
     .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(
@@ -36,7 +46,32 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration, enableDatabaseRetry: builder.Environment.IsProduction());
+builder.Services.AddOptions<PasswordResetOptions>()
+    .Bind(builder.Configuration.GetSection(PasswordResetOptions.SectionName))
+    .Validate(options => options.ExpiryMinutes is >= 5 and <= 1440,
+        "PasswordReset:ExpiryMinutes must be between 5 and 1440 minutes.")
+    .Validate(options => Uri.TryCreate(options.FrontendBaseUrl, UriKind.Absolute, out var uri)
+        && uri.Scheme is "http" or "https",
+        "PasswordReset:FrontendBaseUrl must be an absolute HTTP or HTTPS URL.")
+    .ValidateOnStart();
+builder.Services.AddOptions<EmailOptions>()
+    .Bind(builder.Configuration.GetSection(EmailOptions.SectionName))
+    .Validate(options => options.Provider is EmailOptions.SmtpProvider or EmailOptions.BrevoProvider,
+        "Email:Provider must be Smtp or Brevo.")
+    .Validate(options => options.Provider != EmailOptions.SmtpProvider || !string.IsNullOrWhiteSpace(options.SmtpHost),
+        "Email:SmtpHost is required for the SMTP provider.")
+    .Validate(options => options.Provider != EmailOptions.SmtpProvider || options.SmtpPort is > 0 and <= 65535,
+        "Email:SmtpPort is invalid.")
+    .Validate(options => options.Provider != EmailOptions.BrevoProvider || !string.IsNullOrWhiteSpace(options.Brevo.ApiKey),
+        "Email:Brevo:ApiKey is required for the Brevo provider.")
+    .Validate(options => options.Provider != EmailOptions.BrevoProvider
+        || Uri.TryCreate(options.Brevo.ApiBaseUrl, UriKind.Absolute, out var uri) && uri.Scheme == "https",
+        "Email:Brevo:ApiBaseUrl must be an absolute HTTPS URL.")
+    .Validate(options => options.Provider != EmailOptions.BrevoProvider || options.Brevo.TimeoutSeconds is >= 5 and <= 60,
+        "Email:Brevo:TimeoutSeconds must be between 5 and 60 seconds.")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.SenderAddress), "Email:SenderAddress is required.")
+    .ValidateOnStart();
 if (!builder.Environment.IsEnvironment("Testing"))
 {
     builder.Services.AddOptions<StripeOptions>()
@@ -54,6 +89,19 @@ if (!builder.Environment.IsEnvironment("Testing"))
         .ValidateOnStart();
 }
 builder.Services.AddSignalR();
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+builder.Services.AddCors(options => options.AddPolicy("FitHubWeb", policy =>
+{
+    if (allowedOrigins.Length > 0)
+        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+}));
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // Render is the only public ingress to the container, and its proxy addresses are dynamic.
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 builder.Services.AddOptions<SimulationOptions>()
     .Bind(builder.Configuration.GetSection(SimulationOptions.SectionName))
     .Validate(options => options.ClearanceThresholdMetres is > 0 and <= 10,
@@ -78,7 +126,7 @@ builder.Services.AddRateLimiter(options =>
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions
         {
-            PermitLimit = 5,
+            PermitLimit = builder.Environment.IsEnvironment("Testing") ? 100 : 5,
             Window = TimeSpan.FromMinutes(1),
             QueueLimit = 0,
             AutoReplenishment = true
@@ -87,7 +135,7 @@ builder.Services.AddRateLimiter(options =>
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions
         {
-            PermitLimit = 3,
+            PermitLimit = builder.Environment.IsEnvironment("Testing") ? 100 : 3,
             Window = TimeSpan.FromMinutes(10),
             QueueLimit = 0,
             AutoReplenishment = true
@@ -105,11 +153,20 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("SeedData:Enabled"))
+if (builder.Configuration.GetValue<bool>("Database:ApplyMigrations"))
+{
+    await DatabaseStartup.ApplyMigrationsAsync(app.Services);
+}
+
+var seedEnabled = builder.Configuration.GetValue<bool>("SeedData:Enabled");
+var evaluationSeed = string.Equals(builder.Configuration["SeedData:Mode"], "Evaluation", StringComparison.Ordinal);
+if (seedEnabled && (app.Environment.IsDevelopment() || evaluationSeed))
 {
     await using var scope = app.Services.CreateAsyncScope();
     await scope.ServiceProvider.GetRequiredService<DevelopmentDataSeeder>().SeedAsync();
 }
+
+app.UseForwardedHeaders();
 
 if (app.Environment.IsDevelopment())
 {
@@ -139,6 +196,7 @@ app.Use(async (context, next) =>
 });
 
 app.UseRateLimiter();
+app.UseCors("FitHubWeb");
 app.UseAuthentication();
 app.UseAuthorization();
 var faultPhotoPath = Path.GetFullPath(builder.Configuration["FaultPhotos:LocalPath"] ?? Path.Combine(AppContext.BaseDirectory, "App_Data", "fault-images"));

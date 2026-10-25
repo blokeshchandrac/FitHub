@@ -1,0 +1,118 @@
+services:
+  - type: web
+    name: fithub-api-10252426
+    runtime: docker
+    plan: free
+    region: frankfurt
+    repo: https://github.com/blokeshchandrac/FitHub
+    branch: phase3-finalization
+    autoDeployTrigger: checksPass
+    dockerfilePath: ./backend/src/FitHub.Api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: Database__ApplyMigrations
+        value: "true"
+      - key: ConnectionStrings__FitHubDatabase
+        sync: false
+      - key: Jwt__SigningKey
+        generateValue: true
+      - key: Jwt__Issuer
+        value: FitHub.Api
+      - key: Jwt__Audience
+        value: FitHub.Web
+      - key: Cors__AllowedOrigins__0
+        value: https://fithub-web-10252426.onrender.com
+      - key: PasswordReset__ExpiryMinutes
+        value: "30"
+      - key: PasswordReset__FrontendBaseUrl
+        value: https://fithub-web-10252426.onrender.com
+      - key: Email__Provider
+        value: Brevo
+      - key: Email__Brevo__ApiKey
+        sync: false
+      - key: Email__Brevo__ApiBaseUrl
+        value: https://api.brevo.com
+      - key: Email__Brevo__TimeoutSeconds
+        value: "15"
+      - key: Email__SenderAddress
+        sync: false
+      - key: Email__SenderName
+        value: FitHub
+      - key: SeedData__Enabled
+        value: "true"
+      - key: SeedData__Mode
+        value: Evaluation
+      - key: SeedData__DemoPassword
+        sync: false
+      - key: SeedData__EquipmentDeviceCredential
+        sync: false
+      - key: SeedData__MemberCardUid
+        sync: false
+      - key: SeedData__ParkingCameraCredential
+        sync: false
+      - key: EquipmentDevices__CardUidPepper
+        sync: false
+      - key: Simulation__Enabled
+        value: "true"
+      - key: Simulation__ClearanceSeconds
+        value: "30"
+      - key: Simulation__ParkingScanSeconds
+        value: "60"
+      - key: Simulation__ParkingDemoScanSeconds
+        value: "5"
+      - key: FaultPhotos__LocalPath
+        value: /tmp/fithub-fault-images
+      - key: Stripe__SecretKey
+        sync: false
+      - key: Stripe__WebhookSecret
+        sync: false
+      - key: Stripe__WebBaseUrl
+        value: https://fithub-web-10252426.onrender.com
+      - key: Stripe__CheckoutSuccessUrl
+        value: https://fithub-web-10252426.onrender.com/membership/checkout/success?session_id={CHECKOUT_SESSION_ID}
+      - key: Stripe__CheckoutCancelUrl
+        value: https://fithub-web-10252426.onrender.com/membership/checkout/cancelled
+
+  - type: web
+    name: fithub-web-10252426
+    runtime: static
+    repo: https://github.com/blokeshchandrac/FitHub
+    branch: phase3-finalization
+    autoDeployTrigger: checksPass
+    rootDir: frontend/fithub-web
+    buildCommand: npm ci && npm run build:render
+    staticPublishPath: dist/fithub-web/browser
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.3
+      - key: PUBLIC_API_BASE_URL
+        value: https://fithub-api-10252426.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=()
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://fithub-api-10252426.onrender.com; connect-src 'self' https://fithub-api-10252426.onrender.com wss://fithub-api-10252426.onrender.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+      - path: /runtime-config.js
+        name: Cache-Control
+        value: no-store, max-age=0
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache

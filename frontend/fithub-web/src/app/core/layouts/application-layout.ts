@@ -53,6 +53,7 @@ export class ApplicationLayout {
     { label: 'Parking', path: '/parking', icon: 'P', roles: ['Member', 'Administrator'] },
     { label: 'Scanner / validator', path: '/attendance/scanner', icon: 'S', roles: ['Trainer', 'Administrator'] },
     { label: 'Notifications', path: '/notifications', icon: 'N', roles: ['Member', 'Trainer', 'Administrator'] },
+    { label: 'Notification preferences', path: '/notification-preferences', icon: 'P', roles: ['Member'] },
     { label: 'System activity', path: '/administration/activity', icon: 'L', roles: ['Administrator'] },
     { label: 'Account', path: '/account', icon: 'U', roles: ['Member', 'Trainer', 'Administrator'] },
   ];

@@ -1,6 +1,6 @@
 # FitHub
 
-FitHub is a modular fitness-club platform built as a Master's Software Engineering project. Stages 1-8 deliver the foundation and defined modules; Stage 9 supplies testing, security review, and stabilization evidence.
+FitHub is a modular fitness-club platform built as a Master's Software Engineering project. The final release combines membership and Stripe Test Mode payments, attendance, workouts, progress, recommendations, classes, notifications, administration, and connected virtual equipment and parking laboratories in one role-based application.
 
 ## Repository layout
 
@@ -12,12 +12,21 @@ FitHub is a modular fitness-club platform built as a Master's Software Engineeri
 - `docs` — requirements, design, testing, and deployment documentation
 - `deploy` — reserved deployment assets
 
+The [final documentation index](docs/final/README.md) connects the delivered project profile, requirements, architecture, deployment, acceptance evidence, schedule, lessons learned, and technical debt. Historical Phase 1 and Phase 2 submissions are preserved separately in the official submission package.
+
 ## Prerequisites
 
-- Node.js 22.22.3 or another version supported by Angular 22
+- Node.js 22.22.3 (the version pinned in `.nvmrc` and CI)
 - npm 10 or later
 - .NET SDK 10
 - Docker Desktop with Docker Compose
+
+The public Phase 3 deployment is available at:
+
+- Web application: `https://fithub-web-10252426.onrender.com`
+- API health: `https://fithub-api-10252426.onrender.com/health`
+
+Render, Neon, Brevo and Stripe Test Mode configuration and recovery procedures are documented in the [Render + Neon deployment guide](docs/deployment/render-neon-deployment.md). Factual deployment checks are recorded separately in [the Phase 3 public-deployment evidence](docs/testing/evidence/phase3/public-deployment-verification.log).
 
 ## Start with Docker Compose
 
@@ -33,6 +42,7 @@ Then open:
 - Web application: `http://localhost:4040`
 - API health: `http://localhost:8080/health`
 - Swagger UI: `http://localhost:8080/swagger`
+- Local email inbox (Mailpit): `http://localhost:8025`
 
 Stop the services with `docker compose down`. The PostgreSQL data volume is preserved.
 
@@ -64,7 +74,7 @@ Start the frontend in another terminal:
 
 ```powershell
 Set-Location frontend/fithub-web
-npm install
+npm ci
 npm start
 ```
 
@@ -78,6 +88,8 @@ Set-Location frontend/fithub-web
 npm ci
 npm test -- --watch=false
 npm run build -- --configuration production
+npm audit --omit=dev
+npm audit
 ```
 
 Validate container configuration without starting services:
@@ -85,6 +97,8 @@ Validate container configuration without starting services:
 ```powershell
 docker compose --env-file .env.example config
 ```
+
+The production dependency audit is release-blocking at every severity because those packages can reach the shipped browser application. The complete audit is also reported so development and build-tool advisories remain visible. FitHub's frontend Docker image uses Node only in its build stage and serves the compiled application from Nginx; development tooling is not copied into the runtime image. The `anyComponentStyle` production budget is 8 kB warning/10 kB error because the two interactive Three.js laboratories require substantial component-scoped overlay and responsive-control styling; the verified styles remain below that deliberately narrow limit.
 
 ## Architecture rules
 
@@ -101,6 +115,8 @@ The demo seed process is restricted to the Development environment and reads its
 ## Authentication
 
 The Angular client provides registration, login, forgot-password, unauthorized, route-guard, interceptor, and role-aware navigation support. Access tokens remain in memory; rotating refresh tokens use an HTTP-only cookie and are persisted only as SHA-256 hashes.
+
+Password-recovery links are single-use, expire after 30 minutes, and are delivered to the local Mailpit inbox during Docker development. Configure the frontend base URL, expiry, SMTP sender, and published Mailpit ports through `.env`; the raw reset token is sent only in the email link and only its SHA-256 hash is stored in PostgreSQL.
 
 For local development, set `SeedData__Enabled=true`, provide `SeedData__DemoPassword`, and configure `Jwt__SigningKey` with at least 32 random bytes. The configured demonstration emails are:
 
@@ -145,7 +161,7 @@ npm start
 
 ### Smart Equipment Virtual Lab
 
-Open `http://localhost:4040/simulation` to choose a virtual lab. The existing smart-equipment lab is now at `/simulation/equipment`; use **Refresh Members** to load the minimum safe projection of existing development Member accounts, memberships, and card status. Local Mode executes equipment rules in TypeScript; Connected Mode revalidates those development records and sends isolated events through `/api/simulation/events` and `/hubs/simulation`. Session-only status scenarios never update PostgreSQL. The 30-second clearance period can be changed with `SIMULATION_CLEARANCE_SECONDS` (1–60 for testing; use 30 for normal demonstrations).
+Open `http://localhost:4040/simulation` as an Administrator to choose a virtual lab. The smart-equipment lab is at `/simulation/equipment`; **Refresh Members** loads the minimum safe projection of synthetic Member accounts, memberships and card status. Local Mode remains browser-only. Connected Mode calls the normal equipment application service, persists accepted changes in PostgreSQL and listens on `/hubs/equipment`, so the simulator and operational pages share one authoritative state. The 30-second clearance period can be changed with `SIMULATION_CLEARANCE_SECONDS` (1–60 for testing; use 30 for normal demonstrations).
 
 The interactive smart-parking lab is at `http://localhost:4040/simulation/parking`. Add and drive up to six fictional cars, run the geometry-based virtual camera, test correct parking, two-space obstruction, camera failure and confidence handling. Local Mode never calls the API. Connected Mode requires a signed-in Administrator and persists only the twelve `P-A1`–`P-C4` development spaces plus deduplicated simulation alerts. Normal scans run every 60 seconds; Demo Speed runs every five seconds. The implementation is explicitly a geometry simulator, not real computer vision. See [Smart Parking Virtual Lab](docs/design/smart-parking-virtual-lab.md).
 
@@ -163,4 +179,4 @@ Stage 8 now uses explicit role workflows: Trainers create sessions for Administr
 
 ## Testing and stabilization
 
-Stage 9 provides the complete verification plan, test cases, results, traceability matrix, security review, and residual-risk record in [docs/testing](docs/testing/README.md). The latest role/workflow stabilization verifies 210 backend, Angular, and simulator tests plus a healthy three-service Docker startup; details are in the [test results](docs/testing/test-results.md).
+Stage 9 and the Phase 3 finalization provide the complete verification plan, concrete manual cases, regression suites, deployment evidence, final acceptance evidence, and residual-risk record in [docs/testing](docs/testing/README.md). The final release passed 119 backend unit tests, 95 PostgreSQL integration tests, 142 Angular tests across 46 files, and both two-test simulator suites. All nine final acceptance cases passed; details are in the [current test results](docs/testing/test-results.md) and [final acceptance summary](docs/testing/evidence/phase3/final-acceptance/final-acceptance-summary.md).

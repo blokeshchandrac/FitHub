@@ -1,0 +1,23 @@
+TC-07 manual evidence — Equipment fault and safety control
+Date: 2026-09-17
+
+Member: phase2.registration.20260916@fithub.test
+Administrator: phase2.manual-admin@fithub.test
+Equipment: TREAD-001 / Treadmill
+Category: Safety concern
+Comment: Emergency stop button remained depressed after release during Phase 2 manual test.
+Photo: none
+
+Observed:
+- Member submission succeeded and the report appeared with Open status.
+- Administrator moved the report to UnderReview.
+- Maintenance note: Inspected by Amina; equipment isolated pending emergency-stop test.
+- Administrator changed TREAD-001 from Available to Maintenance with reason “Safety lock for DEF/TC-07 emergency-stop investigation.”
+- Equipment list showed Maintenance.
+- Administrator later cleared the test lock to Available using “Phase 2 safety-lock test complete; returned to service.”
+- PostgreSQL retained the UnderReview report and its maintenance note; equipment cleanup state was Available.
+- Member notification was persisted: “Your report for Treadmill is now UnderReview.”
+
+Decision: PASS
+Limitation: the separate negative attempt to claim while Maintenance was active was not executed in the browser; the administrative lock transition itself was executed and persisted.
+Defect reference: none.

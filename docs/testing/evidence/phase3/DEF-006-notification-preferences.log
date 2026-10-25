@@ -1,0 +1,46 @@
+FitHub Phase 3 focused evidence — DEF-006 / FR-33 notification preferences
+Execution date: 2026-10-22 (Europe/Berlin)
+Environment: Local Docker Compose; Angular http://localhost:4040; API http://localhost:8080; PostgreSQL 18
+Test account: Active Member, active-member@fithub.demo, synthetic active-Membership development account
+Administrator used for the qualifying event: phase2.manual-admin@fithub.test, synthetic Administrator
+Qualifying event: Fault report 982b7ca3-f703-4160-965c-eb42c9853a20 for BIKE-001 / Exercise bike
+
+Preconditions
+- Active Member was authenticated and /notification-preferences was reachable from Member navigation.
+- All six supported optional categories initially existed and were enabled.
+- The evaluator password was read from ignored development configuration and is not recorded here.
+
+Focused steps and results
+1. Opened /notification-preferences in the browser.
+   Expected: human-readable switches for categories with real backend triggers.
+   Actual: Class reminders, Equipment report updates, Membership renewal, Personal records, Streak risk and Training reminders were shown.
+2. Disabled Equipment report updates through the authenticated current-Member preferences API and refreshed the page.
+   Expected: the choice persists and the browser shows the switch off.
+   Actual: PostgreSQL stored Enabled=false and the refreshed switch displayed off.
+3. Created the synthetic BIKE-001 UnusualSound report and changed it to UnderReview as the Administrator.
+   Expected: no new fault-status notification while the category is disabled.
+   Actual: zero notifications existed for deduplication key fault:982b7ca3-f703-4160-965c-eb42c9853a20:UnderReview.
+4. Re-enabled Equipment report updates and changed the report to Scheduled.
+   Expected: one future qualifying notification is created.
+   Actual: the Member Notifications page displayed “Fault report updated — Your report for Exercise bike is now Scheduled.”
+5. Processed the same Scheduled event again.
+   Expected: stable deduplication keeps one notification.
+   Actual: PostgreSQL contained exactly one row for fault:982b7ca3-f703-4160-965c-eb42c9853a20:Scheduled.
+6. Refreshed the preferences page.
+   Expected: the re-enabled value remains stored.
+   Actual: PostgreSQL stored Enabled=true and the refreshed browser switch displayed on.
+
+Database verification
+- NotificationPreferences has one row per user/category enforced by a unique index.
+- FaultReportStatusUpdate persisted false during suppression and true after re-enabling.
+- Disabled event count: 0. Re-enabled repeated event count: 1.
+- Existing notifications remained present in the Member notification list.
+
+Automated verification relevant to this feature
+- Backend unit tests: 114 passed, 0 failed.
+- PostgreSQL integration tests: 91 passed, 0 failed, including defaults, current-user ownership, invalid category rejection, suppression, re-enable, persistence, retained history, deduplication and idempotent seeding.
+- Angular tests: 139 passed across 44 files, including loading, save, failure, reload and Member-only navigation visibility.
+- Angular production build: passed; only pre-existing simulator stylesheet budget warnings remain.
+
+Decision: PASS
+Limitation: The six toggles correspond only to categories with implemented backend triggers. Security/payment notices are not part of this optional enum and therefore cannot be disabled here.

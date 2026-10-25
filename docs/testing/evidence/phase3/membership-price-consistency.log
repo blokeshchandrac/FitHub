@@ -1,0 +1,22 @@
+FitHub Phase 3 evidence — Monthly membership price consistency
+Execution date: 2026-10-21 (Europe/Berlin)
+Environment: Windows local development; Angular http://localhost:4041; ASP.NET Core http://127.0.0.1:5081; PostgreSQL development database plus Testcontainers PostgreSQL integration suite.
+Test account: phase3.acceptance.20261021@fithub.test (synthetic onboarded Member without an active membership; no password recorded in this evidence file).
+
+Expected result
+- The current seeded Monthly plan is EUR 29.90 for one month.
+- Checkout derives 2,990 cents from the server-controlled database amount.
+- Confirmed payment and revenue use the stored successful payment amount.
+- Historical payments are not rewritten.
+
+Actual result
+- Browser: after successful login the account was routed to /membership/choose.
+- Browser: Monthly displayed €29.90, “1 MONTH PERIOD”, and “Price confirmed by FitHub at checkout”.
+- API: the active plan response returned Monthly price 29.90 and duration 1 month.
+- Existing development database query returned Monthly Price=29.90 and BillingPeriodMonths=1.
+- Automated verification: PaymentAmount.ToMinorUnits(29.90m) returned 2,990; checkout ignored browser price data and used the stored plan price; confirmed payment and revenue tests used the stored successful amount.
+- Seeder reconciliation is limited to the known synthetic Monthly plan signature; Administrator-created plans and historical successful payments are not rewritten.
+- A live Stripe Checkout was not opened because only synthetic placeholder Stripe configuration was available. No payment was attempted.
+
+Decision: PASSED for source, API, database plan, UI display, and server amount conversion. Live Stripe-hosted display remains NOT TESTED until valid Stripe Test Mode keys are configured.
+Build/test corroboration: backend unit 109/109; PostgreSQL integration 85/85; Angular 118/118; production build passed; Docker Compose API health and frontend returned HTTP 200.

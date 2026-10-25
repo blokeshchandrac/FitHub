@@ -1,9 +1,15 @@
+using System.Data;
+using System.Security.Cryptography;
+using System.Text;
 using FitHub.Application.Authentication;
 using FitHub.Domain.Auditing;
+using FitHub.Domain.Communications;
 using FitHub.Domain.Identity;
 using FitHub.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace FitHub.Infrastructure.Authentication;
 
@@ -11,13 +17,24 @@ internal sealed class IdentityAuthenticationService(
     UserManager<ApplicationUser> userManager,
     FitHubDbContext dbContext,
     JwtTokenIssuer tokenIssuer,
-    TimeProvider timeProvider) : IAuthenticationService
+    TimeProvider timeProvider,
+    IPasswordResetEmailSender passwordResetEmailSender,
+    IOptions<PasswordResetOptions> passwordResetOptions,
+    ILogger<IdentityAuthenticationService> logger) : IAuthenticationService
 {
+    private readonly PasswordResetOptions _passwordResetOptions = passwordResetOptions.Value;
+
     public async Task<AuthenticationResult> RegisterAsync(
         RegisterCommand command,
         string? ipAddress,
         CancellationToken cancellationToken = default)
     {
+        if (!command.ConsentAccepted)
+        {
+            await AuditAsync("RegistrationRejected", null, ipAddress, "Registration consent was not accepted.", cancellationToken);
+            return AuthenticationResult.Failed();
+        }
+
         if (await userManager.FindByEmailAsync(command.Email) is not null)
         {
             await AuditAsync("RegistrationRejected", null, ipAddress, "Registration could not be completed.", cancellationToken);
@@ -33,6 +50,7 @@ internal sealed class IdentityAuthenticationService(
             LastName = command.LastName.Trim(),
             IsActive = true
         };
+        user.RecordRegistrationConsent(timeProvider.GetUtcNow(), RegistrationConsent.CurrentVersion);
         var createResult = await userManager.CreateAsync(user, command.Password);
         if (!createResult.Succeeded)
         {
@@ -49,6 +67,7 @@ internal sealed class IdentityAuthenticationService(
         }
 
         var roles = await userManager.GetRolesAsync(user);
+        dbContext.NotificationPreferences.AddRange(NotificationPreference.CreateDefaults(user.Id));
         var tokens = tokenIssuer.CreateTokens(user, roles.ToArray());
         dbContext.RefreshTokens.Add(CreateRefreshToken(user.Id, tokens, ipAddress));
         await AuditAsync("RegistrationSucceeded", user.Id, ipAddress, "Member account registered.", cancellationToken, saveChanges: false);
@@ -133,10 +152,138 @@ internal sealed class IdentityAuthenticationService(
         var user = await userManager.FindByEmailAsync(email);
         if (user is not null && user.IsActive)
         {
-            _ = await userManager.GeneratePasswordResetTokenAsync(user);
+            var now = timeProvider.GetUtcNow();
+            var outstanding = await dbContext.PasswordResetTokens
+                .Where(item => item.UserId == user.Id && item.UsedAtUtc == null && item.InvalidatedAtUtc == null)
+                .ToListAsync(cancellationToken);
+            foreach (var item in outstanding)
+            {
+                item.Invalidate(now, "Superseded by a newer request");
+            }
+
+            var rawToken = CreateRawResetToken();
+            var expiresAtUtc = now.AddMinutes(_passwordResetOptions.ExpiryMinutes);
+            dbContext.PasswordResetTokens.Add(new PasswordResetToken(
+                user.Id,
+                HashResetToken(rawToken),
+                expiresAtUtc,
+                ipAddress));
+            await AuditAsync(
+                "PasswordRecoveryRequested",
+                user.Id,
+                ipAddress,
+                "Password recovery was requested.",
+                cancellationToken,
+                saveChanges: false);
+            await dbContext.SaveChangesAsync(cancellationToken);
+
+            try
+            {
+                await passwordResetEmailSender.SendPasswordResetAsync(
+                    user.Email!,
+                    $"{user.FirstName} {user.LastName}".Trim(),
+                    CreateResetUrl(user.Email!, rawToken),
+                    TimeSpan.FromMinutes(_passwordResetOptions.ExpiryMinutes),
+                    cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception)
+            {
+                // The public response remains neutral so SMTP availability cannot reveal account existence.
+                logger.LogWarning("Password-reset email delivery failed.");
+                await AuditAsync(
+                    "PasswordRecoveryDeliveryFailed",
+                    user.Id,
+                    ipAddress,
+                    "Password recovery email delivery failed.",
+                    cancellationToken);
+            }
+
+            return;
         }
 
         await AuditAsync("PasswordRecoveryRequested", user?.Id, ipAddress, "Password recovery was requested.", cancellationToken);
+    }
+
+    public async Task<ResetPasswordResult> ResetPasswordAsync(
+        ResetPasswordCommand command,
+        string? ipAddress,
+        CancellationToken cancellationToken = default)
+    {
+        var strategy = dbContext.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
+        {
+            // Neon retries must encompass the row lock, Identity password update, token use,
+            // session revocation and commit. Reloading state keeps a retry authoritative.
+            dbContext.ChangeTracker.Clear();
+            var tokenHash = HashResetToken(command.Token);
+            var now = timeProvider.GetUtcNow();
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(
+                IsolationLevel.ReadCommitted,
+                cancellationToken);
+
+            // A row lock makes single use reliable even when the same link is submitted concurrently.
+            var resetToken = await dbContext.PasswordResetTokens
+                .FromSqlInterpolated($"SELECT * FROM \"PasswordResetTokens\" WHERE \"TokenHash\" = {tokenHash} FOR UPDATE")
+                .Include(item => item.User)
+                .SingleOrDefaultAsync(cancellationToken);
+            var normalizedEmail = userManager.NormalizeEmail(command.Email);
+            if (resetToken is null ||
+                !resetToken.CanBeUsedAt(now) ||
+                !resetToken.User.IsActive ||
+                !string.Equals(resetToken.User.NormalizedEmail, normalizedEmail, StringComparison.Ordinal))
+            {
+                await AuditAsync(
+                    "PasswordResetRejected",
+                    resetToken?.UserId,
+                    ipAddress,
+                    "Password-reset link was invalid or expired.",
+                    cancellationToken,
+                    saveChanges: false);
+                await dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                return ResetPasswordResult.InvalidToken();
+            }
+
+            var identityToken = await userManager.GeneratePasswordResetTokenAsync(resetToken.User);
+            var identityResult = await userManager.ResetPasswordAsync(resetToken.User, identityToken, command.NewPassword);
+            if (!identityResult.Succeeded)
+            {
+                await AuditAsync(
+                    "PasswordResetRejected",
+                    resetToken.UserId,
+                    ipAddress,
+                    "The replacement password did not satisfy the account policy.",
+                    cancellationToken,
+                    saveChanges: false);
+                await dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                return ResetPasswordResult.Rejected(identityResult.Errors.Select(error => error.Description));
+            }
+
+            resetToken.MarkUsed(now);
+            var refreshTokens = await dbContext.RefreshTokens
+                .Where(item => item.UserId == resetToken.UserId && item.RevokedAt == null)
+                .ToListAsync(cancellationToken);
+            foreach (var refreshToken in refreshTokens)
+            {
+                refreshToken.Revoke(now, ipAddress);
+            }
+
+            await AuditAsync(
+                "PasswordResetSucceeded",
+                resetToken.UserId,
+                ipAddress,
+                "Password was reset and existing refresh sessions were revoked.",
+                cancellationToken,
+                saveChanges: false);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return ResetPasswordResult.Success();
+        });
     }
 
     public async Task<CurrentUserDto?> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -153,6 +300,19 @@ internal sealed class IdentityAuthenticationService(
 
     private RefreshToken CreateRefreshToken(Guid userId, AuthenticationTokens tokens, string? ipAddress) =>
         new(userId, JwtTokenIssuer.HashRefreshToken(tokens.RefreshToken), tokens.RefreshTokenExpiresAt, ipAddress);
+
+    private string CreateResetUrl(string email, string rawToken) =>
+        $"{_passwordResetOptions.FrontendBaseUrl.TrimEnd('/')}/reset-password" +
+        $"?email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(rawToken)}";
+
+    private static string CreateRawResetToken()
+    {
+        var bytes = RandomNumberGenerator.GetBytes(32);
+        return Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+    }
+
+    private static string HashResetToken(string rawToken) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(rawToken)));
 
     private async Task AuditAsync(
         string action,

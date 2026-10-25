@@ -1,6 +1,6 @@
-# FitHub requirements traceability matrix
+# FitHub final requirements traceability matrix
 
-This matrix maps the delivered Stage 1-8 requirements and Stage 9 quality requirements to implementation and at least one verification method. Rows group inseparable sub-requirements that share one implementation boundary.
+This matrix maps the delivered requirements to implementation and at least one verification method. Rows group inseparable sub-requirements that share one implementation boundary. Final release totals are 119 backend unit, 95 PostgreSQL integration, 142 Angular, 2 equipment-simulator and 2 parking-simulator tests; dated Stage 9 totals in historical evidence remain unchanged.
 
 | Requirement | Implementation | Verification |
 |---|---|---|
@@ -46,16 +46,16 @@ This matrix maps the delivered Stage 1-8 requirements and Stage 9 quality requir
 | Trainer class approval workflow | booking aggregate, role controllers, PostgreSQL locking | class unit/integration/API tests |
 | First-time Member onboarding | profile fields/service/controller and Angular Welcome route | profile API and login destination tests |
 | Confirmed net Stripe revenue and refunds | payment fields, webhook, dashboard query | Stripe mapping/webhook and Stage 8 revenue tests |
-| S9 backend unit tests | `FitHub.UnitTests` | 83/83 pass |
-| S9 PostgreSQL integration/API validation | `FitHub.IntegrationTests` | 36/36 pass |
-| S9 Angular component/service tests | six spec files | 11/11 pass; coverage |
+| Backend unit tests | `FitHub.UnitTests` | 119/119 pass at final executable commit |
+| PostgreSQL integration/API validation | `FitHub.IntegrationTests` | 95/95 pass at final executable commit |
+| Angular component/service tests | 46 spec files | 142/142 pass at final executable commit |
 | S9 authentication/roles | auth API and metadata tests | success/failure/privacy/policy cases |
 | S9 Stripe webhooks | payment/gateway security tests | idempotent/signed/tampered/sandbox cases |
 | S9 equipment/concurrency/SignalR | equipment and Stage 6 tests | transition/claim/committed-event cases |
 | S9 fault upload security | fault service/authenticated file route | type/size/signature/access tests |
 | S9 parking/simulator | parking unit/integration/simulator | all suites pass |
 | S9 recommendation rules | recommendation unit tests | every documented rule passes |
-| S9 Docker startup | PostgreSQL 18 mount and three services | full isolated startup/HTTP smoke |
-| S9 secrets/dependencies | ignore/template policy and package pins | pattern scan; clean package audits |
-| S9 SQL/XSS/CORS/HTTPS/rate/log/errors | EF parameterization, encoding/CSP, same-origin, HSTS, limiters, generic errors | review/API tests/headers/logs |
-| S9 accessibility/responsive | semantics, focus/reduced motion, responsive shell | Angular build/specs; browser review |
+| Docker startup | PostgreSQL 18, API, frontend and Mailpit | Compose validation, health checks and final CI |
+| Secrets/dependencies | ignore/template policy and package pins | tracked-file scan; clean npm/NuGet audits |
+| SQL/XSS/CORS/HTTPS/rate/log/errors | EF parameterization, encoding/CSP, narrow hosted CORS, forwarded HTTPS, limiters and generic errors | review, API tests, hosted headers and final acceptance |
+| Accessibility/responsive | semantics, focus/reduced motion and responsive shell | Angular build/specs and targeted browser review; complete mobile/WCAG coverage remains documented debt |

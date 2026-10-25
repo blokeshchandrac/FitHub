@@ -1,0 +1,29 @@
+FitHub Phase 3 evidence — FR-13 dedicated workout-set rest time
+Execution date: 2026-10-21 (Europe/Berlin)
+Environment: Windows local development; Angular http://localhost:4041; ASP.NET Core http://127.0.0.1:5081; PostgreSQL development database plus Testcontainers PostgreSQL integration suite.
+Test account: active-member@fithub.demo (synthetic active Member; no password recorded in this evidence file).
+
+Concrete test data
+- Workout: Free workout
+- Exercise: Bench Press
+- Repetitions: 8
+- Weight: 60 kg
+- Exercise duration: 45 seconds
+- Rest: 90 seconds
+
+Expected result
+- Duration and rest use separate, visibly labelled fields and separate stored values.
+- The completed session retains both values after refresh.
+- Volume remains 8 x 60 kg = 480 kg.
+
+Actual result
+- Browser: the set preview displayed “8 reps × 60 kg · Duration 45 s · Rest 90 s”.
+- Browser: after Save exercise, the completed-set table displayed Duration 45 s and Rest 90 s in separate columns; volume was 480 kg.
+- Browser: after Complete workout and a full page refresh, the completed session still displayed Duration 45 s and Rest 90 s separately.
+- PostgreSQL integration verification returned RestSeconds=90 from the persisted completed session and retained the 480 kg volume.
+- Existing development database query returned RestSeconds=90, DurationSeconds=45, Repetitions=8 and WeightKg=60.00 for the saved set.
+- Validation tests accepted null rest for historical rows and valid values, and rejected negative values and values above 3,600 seconds.
+
+Decision: PASSED.
+Build/test corroboration: backend unit 109/109; PostgreSQL integration 85/85; Angular 118/118; production build passed; Docker Compose API health and frontend returned HTTP 200.
+Related historical defect: DEF-005. Historical Phase 2 evidence remains unchanged.

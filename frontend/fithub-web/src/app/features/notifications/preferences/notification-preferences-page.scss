@@ -1,0 +1,17 @@
+.preferences-page { display: grid; gap: 1rem; }
+.preference-list { display: grid; gap: 0; }
+.notification-preference {
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 1rem 0;
+}
+.notification-preference:first-child { padding-top: 0; }
+.notification-preference span { display: grid; gap: .3rem; }
+.notification-preference small { color: var(--color-text-secondary); line-height: 1.45; }
+.notification-preference input { flex: 0 0 auto; height: 1.25rem; width: 1.25rem; }
+.preference-list .primary-button { justify-self: start; }
+@media(max-width: 480px) { .notification-preference { align-items: flex-start; } }

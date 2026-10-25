@@ -1,0 +1,44 @@
+FitHub Phase 3 focused evidence — DEF-004 connected equipment clearance
+Execution date: 2026-10-22
+Environment: local Docker Compose; Angular production container on http://localhost:4040; ASP.NET Core API and PostgreSQL containers; Development simulation endpoints enabled
+Test operator role: synthetic Administrator
+Synthetic Members: Elena (session-only active-membership override) and Priya (active); a third active synthetic Member was used for the sharing-capacity rejection
+Equipment: Treadmill / EQ-TREADMILL-01 mapped to persisted TREAD-001
+Configured clearance duration: 30 seconds
+
+Expected result
+- Claim persists as Occupied.
+- Sharing persists as SharingAllowed with exactly one partner.
+- A third Member is rejected without replacing the owner or partner.
+- One assigned Member leaving does not start clearance while the other remains detected.
+- Both assigned Members leaving starts exactly one 30-second ClearanceWarning.
+- A return before expiry cancels the warning and restores SharingAllowed.
+- A second uninterrupted clear period releases the machine, clears both assignments and broadcasts Available.
+- Duplicate, stale and out-of-order observations do not restart or cancel the active warning.
+- A transport failure is reported as backend unavailable and is never interpreted as a Member return.
+
+Actual focused browser result
+1. Connected Mode reported both API and normal EquipmentHub connected.
+2. Elena claimed the treadmill: Available -> Occupied.
+3. Elena enabled sharing: Occupied -> SharingAllowed.
+4. Priya joined as the single sharing partner.
+5. The third Member was rejected with SHARING_FULL; Elena and Priya remained displayed as the assigned Members.
+6. Elena moved outside while Priya remained inside. No clearance countdown or state transition occurred.
+7. Priya moved outside. One SENSOR_ZONE_EXITED and one CLEARANCE_COUNTDOWN_STARTED were recorded; the UI showed Clearance Warning and a real-time countdown from 30 seconds.
+8. Priya returned before expiry. One SENSOR_ZONE_ENTERED and one CLEARANCE_COUNTDOWN_CANCELLED were recorded; SharingAllowed was restored.
+9. Priya moved outside again. A new single countdown started. After 30 real seconds, one AUTOMATIC_RELEASE_COMPLETED event was accepted and the simulator displayed Available with no connected Members.
+10. The event sequence contained no BACKEND_UNAVAILABLE entry and no SignalR-generated false SENSOR_ZONE_ENTERED entry.
+11. With the normal Administrator equipment page open in another browser tab, a subsequent connected claim changed TREAD-001 to Occupied with owner Elena without refresh; connected reset changed it back to Available without refresh.
+
+Persistence verification
+Read-only PostgreSQL result after automatic release:
+TREAD-001 | Available | OwnerUserId NULL | PartnerUserId NULL | ClearanceGraceStartedAt NULL
+
+Automated verification
+- Backend unit tests: 113 passed, 0 failed, 0 skipped.
+- Focused PostgreSQL SimulationApiTests: 7 passed, 0 failed, 0 skipped.
+- Angular suite: 40 files passed; 125 tests passed; 0 failed.
+- Docker production builds: backend and frontend passed. Existing simulator component stylesheet budget warnings remain unchanged.
+
+Decision: PASSED
+Defect status: DEF-004 corrected in Phase 3. Historical Phase 2 evidence is unchanged.

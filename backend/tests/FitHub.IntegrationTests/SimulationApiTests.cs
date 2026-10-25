@@ -75,7 +75,7 @@ public sealed class SimulationApiFixture : IAsyncLifetime
         db.ParkingCameras.Add(new ParkingCamera(ParkingSimulationConstants.CameraId, "test-only-hash"));
         await db.SaveChangesAsync();
 
-        using var client = Factory.CreateClient();
+        using var client = await CreateAdministratorClientAsync();
         ExistingMember = Assert.Single((await client.GetFromJsonAsync<SimulationMemberResponse[]>("/api/simulation/members"))!);
     }
 
@@ -139,6 +139,8 @@ public sealed class SimulationApiTests(SimulationApiFixture fixture) : IClassFix
     {
         using var anonymous = fixture.Factory.CreateClient();
         Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync("/api/simulation/status")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync("/api/simulation/members")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync("/api/simulation/parking/status")).StatusCode);
         await using var disabledFactory = fixture.CreateFactory(enabled: false, clearanceSeconds: 30);
         using var admin = await AdministratorClient(disabledFactory);
         Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync("/api/simulation/status")).StatusCode);
@@ -186,10 +188,12 @@ public sealed class SimulationApiTests(SimulationApiFixture fixture) : IClassFix
         var rejected = await Send(client, "NFC_TAPPED", "EQ-TREADMILL-01", "SIM-ESP32-01", third, session);
         Assert.False(rejected.Allowed);
         Assert.Equal("SHARING_FULL", rejected.Code);
+        Assert.Equal(fixture.ExistingMember.MemberId, rejected.OwnerMemberId);
+        Assert.Equal(second.MemberId, rejected.PartnerMemberId);
     }
 
     [Fact]
-    public async Task ConnectedClearanceUsesPersistedWarningAndRestoresSharingWhenCancelled()
+    public async Task ConnectedClearanceIgnoresDuplicateAndStaleEventsThenPersistsAndPublishesRelease()
     {
         await fixture.ResetEquipmentAsync();
         var second = await AddActiveMember("clearance-partner@tests.invalid", "Clearance Partner");
@@ -200,14 +204,47 @@ public sealed class SimulationApiTests(SimulationApiFixture fixture) : IClassFix
         await Send(client, "NFC_TAPPED", "EQ-TREADMILL-01", "SIM-ESP32-01", fixture.ExistingMember, session);
         await Send(client, "SHARING_ENABLED", "EQ-TREADMILL-01", "SIM-ESP32-01", fixture.ExistingMember, session);
         await Send(client, "NFC_TAPPED", "EQ-TREADMILL-01", "SIM-ESP32-01", second, session);
-        Assert.Equal("CLEARANCE_WARNING", (await Send(client, "CLEARANCE_COUNTDOWN_STARTED", "EQ-TREADMILL-01", "SIM-ESP32-01", null, session)).EquipmentState);
-        Assert.Equal("SHARING_ALLOWED", (await Send(client, "CLEARANCE_COUNTDOWN_CANCELLED", "EQ-TREADMILL-01", "SIM-ESP32-01", null, session)).EquipmentState);
-        await Send(client, "CLEARANCE_COUNTDOWN_STARTED", "EQ-TREADMILL-01", "SIM-ESP32-01", null, session);
+
+        var firstExitAt = DateTimeOffset.UtcNow.AddSeconds(-2);
+        var detected = await Send(client, "SENSOR_ZONE_ENTERED", "EQ-TREADMILL-01", "SIM-ESP32-01", null, session, observedAt: firstExitAt.AddSeconds(-1));
+        Assert.Equal("SENSOR_ZONE_ENTERED", detected.Code);
+        Assert.Equal("SHARING_ALLOWED", detected.EquipmentState);
+        var started = await Send(client, "SENSOR_ZONE_EXITED", "EQ-TREADMILL-01", "SIM-ESP32-01", null, session, observedAt: firstExitAt);
+        Assert.Equal("CLEARANCE_COUNTDOWN_STARTED", started.Code);
+        Assert.Equal("CLEARANCE_WARNING", started.EquipmentState);
+
+        var duplicate = await Send(client, "SENSOR_ZONE_EXITED", "EQ-TREADMILL-01", "SIM-ESP32-01", null, session, observedAt: firstExitAt.AddMilliseconds(500));
+        Assert.Equal("SENSOR_OBSERVATION_IGNORED", duplicate.Code);
+        Assert.Equal("CLEARANCE_WARNING", duplicate.EquipmentState);
+        var staleReturn = await Send(client, "SENSOR_ZONE_ENTERED", "EQ-TREADMILL-01", "SIM-ESP32-01", null, session, observedAt: firstExitAt.AddMilliseconds(250));
+        Assert.False(staleReturn.Allowed);
+        Assert.Equal("STALE_SENSOR_EVENT", staleReturn.Code);
+        Assert.Equal("CLEARANCE_WARNING", staleReturn.EquipmentState);
+
+        var cancelled = await Send(client, "SENSOR_ZONE_ENTERED", "EQ-TREADMILL-01", "SIM-ESP32-01", null, session, observedAt: firstExitAt.AddMilliseconds(750));
+        Assert.Equal("CLEARANCE_COUNTDOWN_CANCELLED", cancelled.Code);
+        Assert.Equal("SHARING_ALLOWED", cancelled.EquipmentState);
+
+        var secondExit = await Send(client, "SENSOR_ZONE_EXITED", "EQ-TREADMILL-01", "SIM-ESP32-01", null, session, observedAt: firstExitAt.AddSeconds(1));
+        Assert.Equal("CLEARANCE_COUNTDOWN_STARTED", secondExit.Code);
         await Task.Delay(1100);
         var completed = await Send(client, "AUTOMATIC_RELEASE_COMPLETED", "EQ-TREADMILL-01", "SIM-ESP32-01", null, session);
         Assert.Equal("AVAILABLE", completed.EquipmentState);
         Assert.Null(completed.OwnerMemberId);
         Assert.Null(completed.PartnerMemberId);
+
+        await using var scope = fixture.Factory.Services.CreateAsyncScope();
+        var persisted = await scope.ServiceProvider.GetRequiredService<FitHubDbContext>().Equipment
+            .Include(item => item.StatusHistory).SingleAsync(item => item.Code == "TREAD-001");
+        Assert.Equal(EquipmentState.Available, persisted.CurrentState);
+        Assert.Null(persisted.OwnerUserId);
+        Assert.Null(persisted.PartnerUserId);
+        Assert.Equal(2, persisted.StatusHistory.Count(item => item.EventType == EquipmentEventType.ClearanceWarningStarted));
+        Assert.Single(persisted.StatusHistory, item => item.EventType == EquipmentEventType.ClearanceWarningCancelled);
+        Assert.Single(persisted.StatusHistory, item => item.EventType == EquipmentEventType.ClearanceConfirmed);
+        Assert.Contains(fixture.Notifier.Changes, change => change.EquipmentId == persisted.Id && change.State == "ClearanceWarning");
+        Assert.Contains(fixture.Notifier.Changes, change => change.EquipmentId == persisted.Id && change.State == "SharingAllowed");
+        Assert.Contains(fixture.Notifier.Changes, change => change.EquipmentId == persisted.Id && change.State == "Available");
     }
 
     [Fact]
@@ -266,8 +303,8 @@ public sealed class SimulationApiTests(SimulationApiFixture fixture) : IClassFix
         membership.Activate(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(30));
         db.Memberships.Add(membership);
         await db.SaveChangesAsync();
-        using var anonymous = fixture.Factory.CreateClient();
-        return (await anonymous.GetFromJsonAsync<SimulationMemberResponse[]>("/api/simulation/members"))!.Single(item => item.MemberId == user.Id);
+        using var administrator = await fixture.CreateAdministratorClientAsync();
+        return (await administrator.GetFromJsonAsync<SimulationMemberResponse[]>("/api/simulation/members"))!.Single(item => item.MemberId == user.Id);
     }
 
     private static async Task<HttpClient> AdministratorClient(WebApplicationFactory<Program> factory)
@@ -287,10 +324,11 @@ public sealed class SimulationApiTests(SimulationApiFixture fixture) : IClassFix
         string deviceId,
         SimulationMemberResponse? member,
         string sessionId,
-        SimulationStatusOverride statusOverride = SimulationStatusOverride.Actual)
+        SimulationStatusOverride statusOverride = SimulationStatusOverride.Actual,
+        DateTimeOffset? observedAt = null)
     {
         var request = new SimulationEventRequest(sessionId, deviceId, equipmentId, eventType, member?.CardId,
-            null, DateTimeOffset.UtcNow, true, statusOverride, member?.MemberId);
+            null, observedAt ?? DateTimeOffset.UtcNow, true, statusOverride, member?.MemberId);
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
         options.Converters.Add(new JsonStringEnumConverter());
         var response = await client.PostAsJsonAsync("/api/simulation/events", request, options);

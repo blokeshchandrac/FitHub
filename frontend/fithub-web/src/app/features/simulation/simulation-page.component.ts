@@ -35,6 +35,7 @@ export class SimulationPageComponent implements AfterViewInit, OnDestroy {
   private draggingMemberId: string | null = null;
   private pointerMoved = false;
   private readonly pressedKeys = new Set<string>();
+  private readonly connectedEventQueues = new Map<string, Promise<void>>();
   private lastEquipmentBroadcast = '';
 
   constructor() {
@@ -333,13 +334,13 @@ export class SimulationPageComponent implements AfterViewInit, OnDestroy {
     this.moveSelectedMember(deltaSeconds);
     for (const machine of this.engine.machines()) {
       if (!machine.memberIds.length && machine.sensorResult !== 'SENSOR_FAULT') continue;
-      const previousResult = machine.sensorResult;
-      const observation = this.scene.observeSensor(machine, previousResult);
-      const decision = this.engine.updateSensor(machine.id, observation.result, observation.distanceMetres, nowMs);
-      if (previousResult !== observation.result && observation.result !== 'SENSOR_FAULT')
-        void this.report(observation.result === 'PERSON_DETECTED' ? 'SENSOR_ZONE_ENTERED' : 'SENSOR_ZONE_EXITED', machine, undefined, observation.distanceMetres);
-      if (decision?.allowed && ['CLEARANCE_COUNTDOWN_STARTED', 'CLEARANCE_COUNTDOWN_CANCELLED', 'AUTOMATIC_RELEASE_COMPLETED', 'SENSOR_FAULT'].includes(decision.code))
-        void this.report(decision.code, machine, undefined, observation.distanceMetres);
+      const observation = this.scene.observeSensor(machine, machine.sensorResult);
+      if (this.engine.mode() === 'connected') {
+        const decision = this.engine.observeConnectedSensor(machine.id, observation.result, observation.distanceMetres, nowMs);
+        if (decision?.allowed) this.queueConnectedReport(decision.code, machine, observation.distanceMetres, new Date().toISOString());
+        continue;
+      }
+      this.engine.updateSensor(machine.id, observation.result, observation.distanceMetres, nowMs);
     }
   }
 
@@ -349,8 +350,8 @@ export class SimulationPageComponent implements AfterViewInit, OnDestroy {
       if (response.persistedEquipmentId) this.engine.reconcileConnectedMachine(response);
       this.engine.recordExternalDecision(response, machine.id);
       return response;
-    } catch {
-      this.engine.recordExternalDecision({ allowed: false, code: 'BACKEND_UNAVAILABLE', message: 'Connected event was not applied because the simulation backend could not be reached.' }, machine.id);
+    } catch (error) {
+      this.engine.recordExternalDecision(this.api.submissionFailure(error), machine.id);
       return null;
     }
   }
@@ -360,7 +361,7 @@ export class SimulationPageComponent implements AfterViewInit, OnDestroy {
     await this.tryRemote(eventType, machine, cardId, distanceMetres);
   }
 
-  private request(eventType: string, machine: SimulationMachine, cardId?: string, distanceMetres?: number): SimulationEventRequest {
+  private request(eventType: string, machine: SimulationMachine, cardId?: string, distanceMetres?: number, observedAt = new Date().toISOString()): SimulationEventRequest {
     return {
       simulationSessionId: this.engine.sessionId(),
       deviceId: machine.deviceId,
@@ -368,11 +369,31 @@ export class SimulationPageComponent implements AfterViewInit, OnDestroy {
       eventType,
       cardId,
       distanceMetres,
-      observedAt: new Date().toISOString(),
+      observedAt,
       simulated: true,
       statusOverride: cardId ? this.engine.members().find(member => member.cardId === cardId)?.statusOverride ?? 'Actual' : 'Actual',
       memberId: cardId ? this.engine.members().find(member => member.cardId === cardId)?.id : undefined,
     };
+  }
+
+  private queueConnectedReport(eventType: string, machine: SimulationMachine, distanceMetres: number, observedAt: string): void {
+    const previous = this.connectedEventQueues.get(machine.id) ?? Promise.resolve();
+    // Preserve physical observation order per machine. Concurrent exit/start/cancel requests can
+    // otherwise race at the database and make a transport failure look like a Member returned.
+    const queued = previous.catch(() => undefined).then(async () => {
+      if (this.engine.mode() !== 'connected') return;
+      try {
+        const response = await this.api.send(this.request(eventType, machine, undefined, distanceMetres, observedAt));
+        if (response.persistedEquipmentId) this.engine.reconcileConnectedMachine(response);
+        this.engine.recordExternalDecision(response, machine.id);
+      } catch (error) {
+        this.engine.recordExternalDecision(this.api.submissionFailure(error), machine.id);
+      }
+    });
+    this.connectedEventQueues.set(machine.id, queued);
+    void queued.finally(() => {
+      if (this.connectedEventQueues.get(machine.id) === queued) this.connectedEventQueues.delete(machine.id);
+    });
   }
 
   private async refreshConnectedEquipment(): Promise<void> {

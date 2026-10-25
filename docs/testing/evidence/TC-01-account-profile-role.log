@@ -1,0 +1,37 @@
+TC-01 manual evidence — Account, profile and role-based access
+Date: 2026-09-16 to 2026-09-17
+
+Synthetic Member entered through the public registration form:
+- Name: Elena Martinez
+- Email: phase2.registration.20260916@fithub.test
+- Password: tester-held value; deliberately omitted from evidence and source control
+
+Profile entered through /welcome:
+- Preferred name: Elena
+- Date of birth: 1998-04-15
+- Height: 168 cm
+- Weight: 64 kg
+- Primary goal: Improve strength
+- Activity level: Moderately active
+- Experience level: Beginner
+- Planned days: Monday, Wednesday, Friday
+- Preferred branch: FitHub Demonstration Branch (DEMO)
+
+Observed:
+- Registration succeeded and the Member was routed to /welcome.
+- Profile completion succeeded and routed the Member to /membership/choose.
+- Direct Member navigation to /administration displayed /unauthorized.
+- Administrator and Trainer accounts opened their role-specific dashboards.
+- The public registration form did not request or persist required consent information.
+- Forgot-password accepted an email but the backend discarded the generated reset token; no single-use email link was delivered.
+
+Trainer assignment retest:
+- Administrator: phase2.manual-admin@fithub.test (Amina Testadmin)
+- Trainer: phase2.manual-trainer@fithub.test (Tariq Manualtrainer)
+- Member: phase2.registration.20260916@fithub.test (Elena Martinez)
+- Result: active assignment created at 2026-09-17T05:35:26.687502Z by Amina.
+- Trainer reload showed Elena as the assigned Member.
+
+Decision: FAIL
+Reason: core registration/profile/role separation worked, but FR-01 consent is absent and FR-03 password reset is not an end-to-end email workflow.
+Defects: DEF-002 fixed; GAP-001 consent; GAP-002 password reset delivery.

@@ -7,5 +7,6 @@ public interface IAuthenticationService
     Task<AuthenticationResult> RefreshAsync(string refreshToken, string? ipAddress, CancellationToken cancellationToken = default);
     Task LogoutAsync(string? refreshToken, Guid? userId, string? ipAddress, CancellationToken cancellationToken = default);
     Task RequestPasswordResetAsync(string email, string? ipAddress, CancellationToken cancellationToken = default);
+    Task<ResetPasswordResult> ResetPasswordAsync(ResetPasswordCommand command, string? ipAddress, CancellationToken cancellationToken = default);
     Task<CurrentUserDto?> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken = default);
 }

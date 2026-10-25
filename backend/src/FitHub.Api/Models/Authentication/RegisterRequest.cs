@@ -8,4 +8,5 @@ public sealed record RegisterRequest(
     [Required, StringLength(100, MinimumLength = 1)] string LastName,
     [Required, StringLength(256, MinimumLength = 12), RegularExpression(
         @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$",
-        ErrorMessage = "Password must include uppercase, lowercase, number, and symbol characters.")] string Password);
+        ErrorMessage = "Password must include uppercase, lowercase, number, and symbol characters.")] string Password,
+    bool ConsentAccepted);

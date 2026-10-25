@@ -3,6 +3,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr';
 import { firstValueFrom } from 'rxjs';
 import { AuthenticationService } from '../../../core/authentication/authentication.service';
+import { RuntimeConfigService } from '../../../core/configuration/runtime-config.service';
 import {
   ParkingConnectionState,
   ParkingSimulationBackendStatus,
@@ -14,6 +15,7 @@ import {
 export class ParkingSimulationApiService {
   private readonly http = inject(HttpClient);
   private readonly authentication = inject(AuthenticationService);
+  private readonly runtimeConfig = inject(RuntimeConfigService);
   private connection?: HubConnection;
   readonly backendState = signal<ParkingConnectionState>('disconnected');
   readonly signalRState = signal<ParkingConnectionState>('disconnected');
@@ -57,7 +59,7 @@ export class ParkingSimulationApiService {
     this.signalRState.set('connecting');
     this.connectionMessage.set('API verified. Connecting to ParkingHub…');
     const connection = new HubConnectionBuilder()
-      .withUrl(hubUrl, { accessTokenFactory: () => this.authentication.accessToken() ?? '' })
+      .withUrl(this.runtimeConfig.hubUrl(hubUrl), { accessTokenFactory: () => this.authentication.accessToken() ?? '', withCredentials: true })
       .withAutomaticReconnect()
       .configureLogging(LogLevel.Warning)
       .build();

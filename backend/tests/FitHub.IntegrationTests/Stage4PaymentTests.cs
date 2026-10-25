@@ -36,6 +36,11 @@ public sealed class Stage4PaymentTests : IAsyncLifetime
             builder.UseSetting("SeedData:Enabled", "false");
             builder.ConfigureServices(services =>
             {
+                // Match Neon production behaviour so payment transactions remain valid
+                // when Npgsql's retrying execution strategy is enabled.
+                services.AddDbContext<FitHubDbContext>(options => options.UseNpgsql(
+                    _postgres.GetConnectionString(),
+                    npgsql => npgsql.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), errorCodesToAdd: null)));
                 services.RemoveAll<IPaymentGateway>();
                 services.AddSingleton<IPaymentGateway>(_gateway);
                 services.RemoveAll<IPaymentCheckoutVerifier>();

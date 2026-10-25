@@ -19,6 +19,7 @@ public sealed class ApplicationUserConfiguration : IEntityTypeConfiguration<Appl
         builder.Property(user => user.PreferredName).HasMaxLength(50);
         builder.Property(user => user.HeightCm).HasPrecision(5, 1);
         builder.Property(user => user.WeightKg).HasPrecision(5, 1);
+        builder.Property(user => user.ConsentVersion).HasMaxLength(20);
         builder.HasIndex(user => user.IsActive);
         builder.HasIndex(user => user.OnboardingCompleted);
         builder.HasIndex(user => user.PreferredGymBranchId);

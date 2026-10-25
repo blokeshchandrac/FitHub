@@ -12,10 +12,13 @@ namespace FitHub.Api.Controllers;
 public sealed class EquipmentController(IEquipmentService equipmentService, IEquipmentAccessService accessService) : ControllerBase
 {
     [HttpGet]
+    [Authorize(Policy = AuthorizationPolicies.ActiveMembership)]
     public async Task<IReadOnlyCollection<EquipmentSummaryDto>> List(CancellationToken cancellationToken)
     {
-        var live = User.IsInRole(AuthorizationPolicies.Trainer) || User.IsInRole(AuthorizationPolicies.Administrator) || await accessService.IsCheckedInAsync(User.GetRequiredUserId(), cancellationToken);
-        return await equipmentService.ListAsync(live, User.IsInRole(AuthorizationPolicies.Administrator), cancellationToken);
+        return await equipmentService.ListAsync(
+            includeLiveDetails: true,
+            includeMemberIdentities: User.IsInRole(AuthorizationPolicies.Administrator),
+            cancellationToken);
     }
 
     [HttpGet("{equipmentId:guid}")]

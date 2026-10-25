@@ -1,0 +1,64 @@
+FitHub Phase 3 public deployment verification
+Execution date: 2026-10-24 (Europe/Berlin)
+Environment: Render Free web service and static site; Neon Free PostgreSQL; Stripe Test Mode; Brevo production provider configured
+Deployed source commit: 942b61cb0a06951a223b250c284e7b04433a961c
+Render API deployment: dep-dbdu8lgm7kps73bn560g
+
+Public endpoints
+- Frontend: https://fithub-web-10252426.onrender.com
+- API: https://fithub-api-10252426.onrender.com
+- Health: https://fithub-api-10252426.onrender.com/health
+- Stripe webhook: https://fithub-api-10252426.onrender.com/api/payments/stripe/webhook
+
+Health and startup
+- API health returned HTTP 200 with {"status":"Healthy"}.
+- Render deployment dep-dbdu8lgm7kps73bn560g completed successfully and became Live.
+- The API bound to Render's assigned port and started in Production.
+- No restart loop or fatal startup error was observed in the deployment logs.
+
+Neon PostgreSQL verification
+- A read-only Neon SQL check returned 13 rows in __EFMigrationsHistory.
+- Latest applied migration: 20261022070951_AddMemberNotificationPreferences.
+- The public API read and wrote operational data successfully after deployment.
+- For phase3.deployment.20261023@fithub.test, Neon contained exactly one matching latest payment: Monthly, EUR 29.90, Succeeded; the linked membership was Active.
+- No connection string, password, payment provider reference or token is recorded here.
+
+Authentication smoke results
+- Administrator phase2.manual-admin@fithub.test reached /administration.
+- Trainer phase2.manual-trainer@fithub.test reached /trainer/classes.
+- Active Member phase2.active-member@fithub.test reached /dashboard.
+- No-membership Member no-membership@fithub.demo reached /membership/choose.
+- The synthetic deployment Member reached /dashboard only after confirmed payment reconciliation.
+
+SignalR and simulator smoke results
+- The Administrator equipment laboratory entered Connected Mode, verified the API and normal EquipmentHub connection, loaded the development Members once, and disconnected cleanly.
+- The Administrator parking laboratory entered Connected Mode, verified the API and normal ParkingHub connection, and disconnected cleanly.
+- Equipment and parking simulator routes rendered from the public Angular site without a route-refresh 404.
+- This was a deployment smoke check, not the final Phase 3 acceptance campaign.
+
+Stripe Test Mode result
+- Checkout displayed and charged EUR 29.90 in Stripe Test Mode using the standard 4242 test card.
+- Stripe recorded one Succeeded EUR 29.90 transaction for the synthetic deployment account.
+- FitHub initially retained the payment as Pending when the old API transaction code failed under Neon retry execution strategy.
+- Commit 942b61c made the complete database transaction the retry unit and was deployed before reconciliation was repeated.
+- The existing paid Checkout session was reconciled; no second payment was created.
+- FitHub payment history then showed Succeeded, EUR 29.90, and the Member reached /dashboard.
+- Neon independently confirmed one payment row and an Active membership.
+- Stripe's Event deliveries view showed successful deliveries to the deployed FitHub webhook.
+- Membership activation remained based on server-side Stripe verification; the browser redirect alone did not activate it.
+
+Password-reset email
+- The hosted application uses the configured Brevo HTTPS provider and public frontend base URL.
+- A hosted end-to-end reset email was not sent because no safe deliverable Phase 3 recipient was configured for the synthetic account during this run.
+- Local Mailpit password-reset delivery, single-use completion and token-reuse rejection are covered by GAP-002-password-reset.log.
+- Decision for hosted Brevo delivery: NOT TESTED.
+
+Cold start and free-tier limitations
+- Render warns that the free API instance may sleep after inactivity and can delay a request by 50 seconds or more.
+- The Angular client and SignalR clients are configured to reconnect, but a full sleep-duration cold-start test was not performed in this run.
+- Equipment fault photographs stored on the Render container filesystem are ephemeral; fault reports themselves remain persisted in Neon and photographs are optional.
+
+Decision
+- Public frontend, API health, Neon persistence/migrations, role login routing, simulator connectivity, Stripe Test payment, webhook delivery, payment persistence and membership activation: PASSED.
+- Hosted Brevo delivery and a full free-tier sleep/wake cycle: NOT TESTED as described above.
+- Overall deployment verification: PASSED WITH DOCUMENTED FREE-TIER AND EMAIL-DELIVERY LIMITATIONS.

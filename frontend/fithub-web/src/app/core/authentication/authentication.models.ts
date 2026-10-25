@@ -21,4 +21,16 @@ export interface LoginRequest {
 export interface RegistrationRequest extends LoginRequest {
   readonly firstName: string;
   readonly lastName: string;
+  readonly consentAccepted: boolean;
+}
+
+export interface ResetPasswordRequest {
+  readonly email: string;
+  readonly token: string;
+  readonly newPassword: string;
+  readonly confirmPassword: string;
+}
+
+export interface AuthenticationMessage {
+  readonly message: string;
 }

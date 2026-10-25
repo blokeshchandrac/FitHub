@@ -48,27 +48,35 @@ internal sealed class PaymentReconciliationService(
             return new PaymentReconciliationResult(false, false, "Stripe has not confirmed the payment.");
         }
 
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
-        var payment = await dbContext.Payments
-            .Include(item => item.Membership)
-            .Include(item => item.MembershipPlan)
-            .SingleAsync(
-                item => item.UserId == userId && item.ProviderReference == resolvedSessionId,
-                cancellationToken);
-
-        if (payment.Status == PaymentStatus.Succeeded)
+        var strategy = dbContext.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
         {
-            await transaction.CommitAsync(cancellationToken);
-            return new PaymentReconciliationResult(true, false, "Payment was already confirmed.");
-        }
+            // The entire transaction must be the retry unit when Neon briefly drops a
+            // connection while waking. A retry starts from persisted state so an
+            // ambiguously committed payment cannot activate membership twice.
+            dbContext.ChangeTracker.Clear();
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+            var payment = await dbContext.Payments
+                .Include(item => item.Membership)
+                .Include(item => item.MembershipPlan)
+                .SingleAsync(
+                    item => item.UserId == userId && item.ProviderReference == resolvedSessionId,
+                    cancellationToken);
 
-        ValidateSuccessfulCheckout(payment, verification);
-        var now = timeProvider.GetUtcNow();
-        payment.MarkSucceeded(now, verification.StripePaymentIntentId);
-        PaymentMembershipActivator.Apply(payment, now);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-        return new PaymentReconciliationResult(true, true, "Payment confirmed.");
+            if (payment.Status == PaymentStatus.Succeeded)
+            {
+                await transaction.CommitAsync(cancellationToken);
+                return new PaymentReconciliationResult(true, false, "Payment was already confirmed.");
+            }
+
+            ValidateSuccessfulCheckout(payment, verification);
+            var now = timeProvider.GetUtcNow();
+            payment.MarkSucceeded(now, verification.StripePaymentIntentId);
+            PaymentMembershipActivator.Apply(payment, now);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return new PaymentReconciliationResult(true, true, "Payment confirmed.");
+        });
     }
 
     private static void ValidateSessionId(string checkoutSessionId)
@@ -85,7 +93,7 @@ internal sealed class PaymentReconciliationService(
         Payment payment,
         PaymentCheckoutVerification verification)
     {
-        var expectedAmountMinor = checked((long)(payment.Amount * 100m));
+        var expectedAmountMinor = PaymentAmount.ToMinorUnits(payment.Amount);
         if (verification.IsLiveMode ||
             verification.CheckoutSessionId != payment.ProviderReference ||
             verification.PaymentId != payment.Id ||

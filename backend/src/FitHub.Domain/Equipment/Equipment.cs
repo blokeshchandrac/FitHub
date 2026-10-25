@@ -33,6 +33,10 @@ public sealed class Equipment : Entity
         {
             OwnerUserId = userId;
             PartnerUserId = null;
+            // A new session must establish its own sensor baseline. Retaining the previous
+            // session's clear reading could cause the first new clear observation to be ignored.
+            PresenceDetected = null;
+            PresenceChangedAt = null;
             return TransitionTo(EquipmentState.Occupied, EquipmentEventType.Claimed, occurredAt, userId, source);
         }
 
@@ -89,8 +93,22 @@ public sealed class Equipment : Entity
         return TransitionTo(EquipmentState.Available, clearanceConfirmed ? EquipmentEventType.ClearanceConfirmed : EquipmentEventType.Released, occurredAt, userId);
     }
 
-    public EquipmentStatusEvent RecordPresence(bool detected, DateTimeOffset occurredAt)
+    public EquipmentStatusEvent? RecordPresence(bool detected, DateTimeOffset occurredAt)
     {
+        // Device observations can be retried or arrive out of order. An older observation must
+        // never cancel or restart a newer clearance countdown.
+        if (PresenceChangedAt.HasValue && occurredAt <= PresenceChangedAt.Value)
+            return null;
+
+        if (PresenceDetected == detected)
+        {
+            // Advance the observation watermark without adding history or changing the grace start.
+            // This prevents a delayed opposite reading from being accepted after a duplicate retry.
+            PresenceChangedAt = occurredAt;
+            return null;
+        }
+
+        var hadPresenceBaseline = PresenceDetected.HasValue;
         PresenceDetected = detected;
         PresenceChangedAt = occurredAt;
         if (detected)
@@ -104,6 +122,14 @@ public sealed class Equipment : Entity
                 return TransitionTo(restored, EquipmentEventType.ClearanceWarningCancelled, occurredAt);
             }
             return Record(EquipmentEventType.PresenceDetected, occurredAt);
+        }
+
+        if (!hadPresenceBaseline)
+        {
+            // A claim starts with no sensor baseline. An initial clear reading establishes that
+            // baseline, but it is not proof that an assigned Member has left the machine.
+            ClearanceGraceStartedAt = null;
+            return null;
         }
 
         if (CurrentState is EquipmentState.Occupied or EquipmentState.SharingAllowed)
@@ -166,6 +192,11 @@ public sealed class Equipment : Entity
             OwnerUserId = null;
             PartnerUserId = null;
             ClearanceGraceStartedAt = null;
+        }
+        if (state == EquipmentState.Available)
+        {
+            PresenceDetected = null;
+            PresenceChangedAt = null;
         }
         if (state == EquipmentState.Offline) StateBeforeOffline = CurrentState;
         if (state == CurrentState) return Record(EquipmentEventType.AdministratorOverride, occurredAt, administratorId, reason);
