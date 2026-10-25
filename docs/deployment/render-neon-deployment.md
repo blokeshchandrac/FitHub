@@ -2,7 +2,7 @@
 
 ## Architecture
 
-FitHub deploys from `phase3-finalization` as:
+FitHub deploys from the final `master` branch as:
 
 ```text
 Render Angular static site (HTTPS)

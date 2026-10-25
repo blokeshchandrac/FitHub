@@ -5,7 +5,7 @@ services:
     plan: free
     region: frankfurt
     repo: https://github.com/blokeshchandrac/FitHub
-    branch: phase3-finalization
+    branch: master
     autoDeployTrigger: checksPass
     dockerfilePath: ./backend/src/FitHub.Api/Dockerfile
     dockerContext: .
@@ -80,7 +80,7 @@ services:
     name: fithub-web-10252426
     runtime: static
     repo: https://github.com/blokeshchandrac/FitHub
-    branch: phase3-finalization
+    branch: master
     autoDeployTrigger: checksPass
     rootDir: frontend/fithub-web
     buildCommand: npm ci && npm run build:render
