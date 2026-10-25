@@ -1,0 +1,19 @@
+# Final Phase 3 defect and retest register
+
+Test window: 24–25 October 2026. Historical Phase 2 evidence was not changed.
+
+| Reference | Original failure | Cause | Correction | Retest | Status |
+| --- | --- | --- | --- | --- | --- |
+| P3-001 | TC-F07 allowed an equipment fault submission with an empty required comment. | The Member form and request path did not consistently enforce the required comment. | `f6b9dfe` — `fix: require fault report comments` added validation and regression coverage. | Empty comment was rejected; the exact Safety concern report then persisted and completed the Under Review → Maintenance → Resolved workflow. | Passed |
+| P3-002 | The first hosted TC-F09 class booking returned a database execution-strategy/transaction error. | The PostgreSQL row-lock transaction was outside the configured retry execution strategy. | `f507c9d` — `fix: run class bookings through database retry strategy`. | Hosted booking succeeded and the class/member counts persisted. | Passed |
+| P3-003 | A third Member was placed on a waitlist when the approved acceptance behaviour required a full class to reject the booking. | `BookAsync` created `Waitlisted` records after confirmed capacity was reached. | `c78f599` — `fix: reject class bookings at capacity`. | At 2/2 confirmed and 0 waiting, a third synthetic Member received HTTP 409 with “This class is full.” No waitlist row was added. Cancelling the temporary booking restored 1/2 confirmed and 0 waiting. | Passed |
+| P3-004 | An Active Member could open `/equipment`, but `EquipmentHub` negotiation returned HTTP 403 and the list hid the live states. | The read-only hub and list incorrectly required a recent attendance check-in. Claim/share/release already enforce check-in independently. | `240c61f` — `fix: allow active members live equipment updates`; added active/inactive Member PostgreSQL integration tests. | Priya saw all four live machine states. A persisted Administrator override changed `TREAD-001` Available → Maintenance → Available on the already-open Member page without refresh. No new hub error occurred. Owner, partner and grace fields remained clear after restoration. | Passed |
+| P3-005 | A newly delivered hosted password-reset link opened the real reset form, but submitting a valid new password returned the neutral reset-failure message. | Production used `NpgsqlRetryingExecutionStrategy`, while `ResetPasswordAsync` started a manual transaction outside that strategy. PostgreSQL rejected the user-initiated transaction before the password/token update could commit. | `fb429cd` — `fix: run password reset through database retry strategy`; the complete row-lock, password update, token consumption, session revocation and commit now execute through `CreateExecutionStrategy().ExecuteAsync(...)`, with production-like integration coverage. | The correction passed 119 backend unit tests and 36 focused authentication integration tests locally. GitHub Actions run `40175313219` passed after rerunning one unrelated transient PostgreSQL service interruption. A completely new Brevo email then delivered a public reset link; the hosted reset succeeded, the old password was rejected, the new password authenticated, and reuse of the same link was rejected. | Passed |
+
+Notes:
+
+- An expired browser access token produced an expected HTTP 401 before the P3-004 retest. A normal fresh sign-in restored the session; this was not counted as a product defect.
+- A first UI rebook attempt displayed the generic failure state. A focused hosted API retry returned HTTP 200 and the refreshed UI showed `Confirmed` at 2/2. No reproducible rebooking defect remained.
+- The first attempt of GitHub Actions run `40175313219` lost its PostgreSQL service connection during fixture initialization. The unchanged commit passed every applicable job on rerun; this was recorded as CI-environment instability, not an application defect.
+
+
