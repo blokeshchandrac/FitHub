@@ -53,7 +53,7 @@ These URLs were verified on 24 October 2026. See the [public-deployment evidence
 
 1. In Render choose **New > Blueprint**.
 2. Connect `https://github.com/blokeshchandrac/FitHub`.
-3. Select `phase3-finalization` and `render.yaml`.
+3. Select `master` and `render.yaml` for the final release. The `phase3-finalization` branch was used only while verifying the release candidate.
 4. Confirm the API is a free Docker web service in Frankfurt and the frontend is a static site.
 5. Confirm both service names are available; correct all candidate URLs first if a name changes.
 6. Enter every `sync: false` value directly in Render.

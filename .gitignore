@@ -38,6 +38,7 @@ coverage/
 /screenshots/
 /temp/
 /tmp/
+/submission-output/
 Screenshot*.png
 codex-clipboard-*.png
 *.tmp

@@ -1,0 +1,619 @@
+{
+  "title": "FitHub Final Waterfall Plan - Planned and Actual",
+  "tasks": [
+    [],
+    [
+      {
+        "id": "40008000-0000-0000-0000-000000000001",
+        "name": "PLANNED BASELINE - Waterfall and MoSCoW",
+        "responsibleUser": null,
+        "status": {
+          "id": 100654,
+          "name": "Done",
+          "isClosed": true
+        },
+        "startDate": 1783900800000,
+        "dueDate": 1792886400000,
+        "subsequentTasks": [],
+        "parent": null,
+        "extra": null,
+        "tags": null,
+        "project": "fithub-final-2026",
+        "childrenInPage": [
+          [],
+          [
+            {
+              "id": "40008000-0000-0000-0000-000000000002",
+              "name": "Requirements and project planning - Must Have first",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1783900800000,
+              "dueDate": 1784332800000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000001",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-000000000003",
+              "name": "System and architecture design",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1784419200000,
+              "dueDate": 1785196800000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000001",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-000000000004",
+              "name": "Core implementation",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1785283200000,
+              "dueDate": 1786492800000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000001",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-000000000005",
+              "name": "Membership, payment and attendance",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1785888000000,
+              "dueDate": 1786924800000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000001",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-000000000006",
+              "name": "Workout, progress and dashboard",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1786406400000,
+              "dueDate": 1787529600000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000001",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-000000000007",
+              "name": "Smart-equipment laboratory",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1787011200000,
+              "dueDate": 1788998400000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000001",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-000000000008",
+              "name": "Parking laboratory",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1787788800000,
+              "dueDate": 1789084800000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000001",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-000000000009",
+              "name": "Administration, classes and notifications",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1788134400000,
+              "dueDate": 1789430400000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000001",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-00000000000a",
+              "name": "Phase 2 testing and corrections",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1788220800000,
+              "dueDate": 1789603200000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000001",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-00000000000b",
+              "name": "Finalization, deployment and release",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1789689600000,
+              "dueDate": 1792886400000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000001",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            }
+          ]
+        ]
+      },
+      {
+        "id": "40008000-0000-0000-0000-000000000014",
+        "name": "ACTUAL COMPLETION - Evidence-backed timeline",
+        "responsibleUser": null,
+        "status": {
+          "id": 100654,
+          "name": "Done",
+          "isClosed": true
+        },
+        "startDate": 1783900800000,
+        "dueDate": 1792886400000,
+        "subsequentTasks": [],
+        "parent": null,
+        "extra": null,
+        "tags": null,
+        "project": "fithub-final-2026",
+        "childrenInPage": [
+          [],
+          [
+            {
+              "id": "40008000-0000-0000-0000-000000000015",
+              "name": "Requirements and project planning",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1783900800000,
+              "dueDate": 1784332800000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000014",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-000000000016",
+              "name": "System and architecture design",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1784419200000,
+              "dueDate": 1786492800000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000014",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-000000000017",
+              "name": "Core implementation",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1786579200000,
+              "dueDate": 1789516800000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000014",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-000000000018",
+              "name": "Membership, payment and attendance",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1786579200000,
+              "dueDate": 1789516800000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000014",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-000000000019",
+              "name": "Workout, progress and dashboard",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1786579200000,
+              "dueDate": 1789516800000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000014",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-00000000001a",
+              "name": "Smart-equipment laboratory",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1786579200000,
+              "dueDate": 1789516800000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000014",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-00000000001b",
+              "name": "Parking laboratory",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1786579200000,
+              "dueDate": 1789516800000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000014",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-00000000001c",
+              "name": "Administration, classes and notifications",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1786579200000,
+              "dueDate": 1789516800000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000014",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-00000000001d",
+              "name": "Phase 2 testing and corrections",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1789516800000,
+              "dueDate": 1791849600000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000014",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-00000000001e",
+              "name": "Phase 3 requirement-gap corrections",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1792540800000,
+              "dueDate": 1792627200000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000014",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-00000000001f",
+              "name": "Connected-equipment clearance correction",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1792627200000,
+              "dueDate": 1792627200000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000014",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-000000000020",
+              "name": "Password reset and notification preferences",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1792627200000,
+              "dueDate": 1792627200000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000014",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-000000000021",
+              "name": "CI and dependency security hardening",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1792627200000,
+              "dueDate": 1792627200000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000014",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-000000000022",
+              "name": "Render, Neon and Brevo deployment",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1792627200000,
+              "dueDate": 1792800000000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000014",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-000000000023",
+              "name": "Final acceptance testing",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1792800000000,
+              "dueDate": 1792886400000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000014",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-000000000024",
+              "name": "Phase 3 documentation and packaging",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1792886400000,
+              "dueDate": 1792886400000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000014",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            },
+            {
+              "id": "40008000-0000-0000-0000-000000000025",
+              "name": "Final release",
+              "responsibleUser": null,
+              "status": {
+                "id": 100654,
+                "name": "Done",
+                "isClosed": true
+              },
+              "startDate": 1792886400000,
+              "dueDate": 1792886400000,
+              "subsequentTasks": [],
+              "parent": "40008000-0000-0000-0000-000000000014",
+              "extra": null,
+              "tags": null,
+              "project": "fithub-final-2026",
+              "childrenInPage": [
+                [],
+                []
+              ]
+            }
+          ]
+        ]
+      }
+    ]
+  ]
+}

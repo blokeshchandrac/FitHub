@@ -2,13 +2,16 @@
 
 This list records current, factual release limitations. Historical Phase 2 results remain in the Phase 2 evidence package.
 
-## Open after the 2026-10-21 Phase 3 corrections
+## Open after final acceptance on 25 October 2026
 
-- **Hosted Stripe retest:** the Monthly plan, server-side EUR 29.90 amount, 2,990-cent conversion, webhook rules and revenue calculations are covered locally, but the Stripe-hosted checkout was not manually reopened because valid Stripe Test Mode credentials were unavailable in the verification shell.
-- **Frontend dependency audit policy:** production dependencies are release-blocking at every severity and are checked with `npm audit --omit=dev`; the complete development tree is reported separately. Angular build/CLI and Vitest use patched compatible releases, while Angular's exact Vite pin is safely constrained to the patched compatible Vite release through the narrow package override documented in `package.json`.
-- **Retained development data:** historical successful payments keep their original amount by design. A retained demo account may therefore show an older historical cost-per-visit even though new Monthly purchases use EUR 29.90.
-- **Registration transaction boundary:** a deliberately invalid local JWT signing configuration demonstrated that Identity user/role creation can complete before access-token issuance fails. Production validation prevents an invalid key from starting the API, but making registration and token issuance a single recoverable application workflow would improve resilience.
-- **Evaluator database drift:** previously retained local Identity password hashes can differ from the current development seed password because the safe seeder does not overwrite existing account passwords. A clean seeded evaluator environment avoids this; retained environments require documented reconciliation rather than automatic password replacement.
+- **Mobile acceptance breadth:** the final hosted campaign did not repeat every workflow at every mobile viewport.
+- **NFR-16 load measurement:** no approved 20-concurrent-user test with p95 read/write latency and error-rate evidence exists. Modular extensibility must not be presented as measured scalability.
+- **Fault-photo persistence:** optional photographs use Render Free ephemeral storage. The fault report itself remains persisted in Neon.
+- **Stripe dashboard cleanup:** two Test Mode webhook registrations remain. Stable event/payment idempotency prevents duplicate processing, but the redundant registration should be removed after submission.
+- **Free-tier wake delay:** Render and Neon can sleep and add an initial delay. Clients retry and SignalR reconnects, but this is not production-availability evidence.
+- **Frontend dependency audit policy:** production dependencies are release-blocking and checked with `npm audit --omit=dev`; the complete development tree is reported separately. Angular build/CLI and Vitest use compatible patched releases, with the narrow Vite override documented in `package.json`.
+- **Retained development data:** historical successful payments keep their original amount by design. New Monthly purchases use the server-owned EUR 29.90 plan price.
+- **Registration transaction boundary:** production configuration validation prevents an invalid JWT key from starting the API, but registration and token issuance could be wrapped in one recoverable application workflow in a later release.
 
 ## Corrected in Phase 3
 

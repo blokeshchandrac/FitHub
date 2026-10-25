@@ -1,6 +1,6 @@
 # FitHub
 
-FitHub is a modular fitness-club platform built as a Master's Software Engineering project. Stages 1-8 deliver the foundation and defined modules; Stage 9 supplies testing, security review, and stabilization evidence.
+FitHub is a modular fitness-club platform built as a Master's Software Engineering project. The final release combines membership and Stripe Test Mode payments, attendance, workouts, progress, recommendations, classes, notifications, administration, and connected virtual equipment and parking laboratories in one role-based application.
 
 ## Repository layout
 
@@ -11,6 +11,8 @@ FitHub is a modular fitness-club platform built as a Master's Software Engineeri
 - `firmware` — reserved equipment-controller firmware
 - `docs` — requirements, design, testing, and deployment documentation
 - `deploy` — reserved deployment assets
+
+The [final documentation index](docs/final/README.md) connects the delivered project profile, requirements, architecture, deployment, acceptance evidence, schedule, lessons learned, and technical debt. Historical Phase 1 and Phase 2 submissions are preserved separately in the official submission package.
 
 ## Prerequisites
 
@@ -177,4 +179,4 @@ Stage 8 now uses explicit role workflows: Trainers create sessions for Administr
 
 ## Testing and stabilization
 
-Stage 9 provides the complete verification plan, test cases, results, traceability matrix, security review, and residual-risk record in [docs/testing](docs/testing/README.md). The latest role/workflow stabilization verifies 210 backend, Angular, and simulator tests plus a healthy three-service Docker startup; details are in the [test results](docs/testing/test-results.md).
+Stage 9 and the Phase 3 finalization provide the complete verification plan, concrete manual cases, regression suites, deployment evidence, final acceptance evidence, and residual-risk record in [docs/testing](docs/testing/README.md). The final release passed 119 backend unit tests, 95 PostgreSQL integration tests, 142 Angular tests across 46 files, and both two-test simulator suites. All nine final acceptance cases passed; details are in the [current test results](docs/testing/test-results.md) and [final acceptance summary](docs/testing/evidence/phase3/final-acceptance/final-acceptance-summary.md).
