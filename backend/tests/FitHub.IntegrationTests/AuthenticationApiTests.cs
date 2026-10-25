@@ -53,6 +53,11 @@ public sealed class AuthenticationApiTests : IAsyncLifetime
             builder.UseSetting("SeedData:Accounts:1:MembershipState", "Active");
             builder.ConfigureServices(services =>
             {
+                services.RemoveAll<FitHubDbContext>();
+                services.RemoveAll<DbContextOptions<FitHubDbContext>>();
+                services.AddDbContext<FitHubDbContext>(options => options.UseNpgsql(
+                    _postgres.GetConnectionString(),
+                    npgsql => npgsql.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), errorCodesToAdd: null)));
                 services.RemoveAll<IPaymentGateway>();
                 services.AddSingleton<IPaymentGateway, CheckoutTestGateway>();
                 services.RemoveAll<IPasswordResetEmailSender>();

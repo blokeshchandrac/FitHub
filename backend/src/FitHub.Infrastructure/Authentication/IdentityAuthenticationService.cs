@@ -213,68 +213,77 @@ internal sealed class IdentityAuthenticationService(
         string? ipAddress,
         CancellationToken cancellationToken = default)
     {
-        var tokenHash = HashResetToken(command.Token);
-        var now = timeProvider.GetUtcNow();
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
-
-        // A row lock makes single use reliable even when the same link is submitted concurrently.
-        var resetToken = await dbContext.PasswordResetTokens
-            .FromSqlInterpolated($"SELECT * FROM \"PasswordResetTokens\" WHERE \"TokenHash\" = {tokenHash} FOR UPDATE")
-            .Include(item => item.User)
-            .SingleOrDefaultAsync(cancellationToken);
-        var normalizedEmail = userManager.NormalizeEmail(command.Email);
-        if (resetToken is null ||
-            !resetToken.CanBeUsedAt(now) ||
-            !resetToken.User.IsActive ||
-            !string.Equals(resetToken.User.NormalizedEmail, normalizedEmail, StringComparison.Ordinal))
+        var strategy = dbContext.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
         {
-            await AuditAsync(
-                "PasswordResetRejected",
-                resetToken?.UserId,
-                ipAddress,
-                "Password-reset link was invalid or expired.",
-                cancellationToken,
-                saveChanges: false);
-            await dbContext.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-            return ResetPasswordResult.InvalidToken();
-        }
+            // Neon retries must encompass the row lock, Identity password update, token use,
+            // session revocation and commit. Reloading state keeps a retry authoritative.
+            dbContext.ChangeTracker.Clear();
+            var tokenHash = HashResetToken(command.Token);
+            var now = timeProvider.GetUtcNow();
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(
+                IsolationLevel.ReadCommitted,
+                cancellationToken);
 
-        var identityToken = await userManager.GeneratePasswordResetTokenAsync(resetToken.User);
-        var identityResult = await userManager.ResetPasswordAsync(resetToken.User, identityToken, command.NewPassword);
-        if (!identityResult.Succeeded)
-        {
+            // A row lock makes single use reliable even when the same link is submitted concurrently.
+            var resetToken = await dbContext.PasswordResetTokens
+                .FromSqlInterpolated($"SELECT * FROM \"PasswordResetTokens\" WHERE \"TokenHash\" = {tokenHash} FOR UPDATE")
+                .Include(item => item.User)
+                .SingleOrDefaultAsync(cancellationToken);
+            var normalizedEmail = userManager.NormalizeEmail(command.Email);
+            if (resetToken is null ||
+                !resetToken.CanBeUsedAt(now) ||
+                !resetToken.User.IsActive ||
+                !string.Equals(resetToken.User.NormalizedEmail, normalizedEmail, StringComparison.Ordinal))
+            {
+                await AuditAsync(
+                    "PasswordResetRejected",
+                    resetToken?.UserId,
+                    ipAddress,
+                    "Password-reset link was invalid or expired.",
+                    cancellationToken,
+                    saveChanges: false);
+                await dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                return ResetPasswordResult.InvalidToken();
+            }
+
+            var identityToken = await userManager.GeneratePasswordResetTokenAsync(resetToken.User);
+            var identityResult = await userManager.ResetPasswordAsync(resetToken.User, identityToken, command.NewPassword);
+            if (!identityResult.Succeeded)
+            {
+                await AuditAsync(
+                    "PasswordResetRejected",
+                    resetToken.UserId,
+                    ipAddress,
+                    "The replacement password did not satisfy the account policy.",
+                    cancellationToken,
+                    saveChanges: false);
+                await dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                return ResetPasswordResult.Rejected(identityResult.Errors.Select(error => error.Description));
+            }
+
+            resetToken.MarkUsed(now);
+            var refreshTokens = await dbContext.RefreshTokens
+                .Where(item => item.UserId == resetToken.UserId && item.RevokedAt == null)
+                .ToListAsync(cancellationToken);
+            foreach (var refreshToken in refreshTokens)
+            {
+                refreshToken.Revoke(now, ipAddress);
+            }
+
             await AuditAsync(
-                "PasswordResetRejected",
+                "PasswordResetSucceeded",
                 resetToken.UserId,
                 ipAddress,
-                "The replacement password did not satisfy the account policy.",
+                "Password was reset and existing refresh sessions were revoked.",
                 cancellationToken,
                 saveChanges: false);
             await dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
-            return ResetPasswordResult.Rejected(identityResult.Errors.Select(error => error.Description));
-        }
-
-        resetToken.MarkUsed(now);
-        var refreshTokens = await dbContext.RefreshTokens
-            .Where(item => item.UserId == resetToken.UserId && item.RevokedAt == null)
-            .ToListAsync(cancellationToken);
-        foreach (var refreshToken in refreshTokens)
-        {
-            refreshToken.Revoke(now, ipAddress);
-        }
-
-        await AuditAsync(
-            "PasswordResetSucceeded",
-            resetToken.UserId,
-            ipAddress,
-            "Password was reset and existing refresh sessions were revoked.",
-            cancellationToken,
-            saveChanges: false);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-        return ResetPasswordResult.Success();
+            return ResetPasswordResult.Success();
+        });
     }
 
     public async Task<CurrentUserDto?> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken = default)
